@@ -1,0 +1,19 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: self-hosted
+    steps:
+      - name: Check service health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8085 || echo "000")
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Health check failed! Status: $STATUS"
+            exit 1
+          fi
+          echo "Health check passed: $STATUS"

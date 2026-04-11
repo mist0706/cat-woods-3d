@@ -1,0 +1,27 @@
+name: Deploy to UNAS
+
+on:
+  push:
+    branches: [master, main]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          docker build -t cat-woods-3d:latest .
+      - name: Deploy to UNAS
+        run: |
+          docker stop cat-woods-3d || true
+          docker rm cat-woods-3d || true
+          docker run -d \
+            --name cat-woods-3d \
+            --restart unless-stopped \
+            -p 8085:80 \
+            cat-woods-3d:latest
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -s -o /dev/null -w "%{http_code}" http://localhost:8085 || exit 1

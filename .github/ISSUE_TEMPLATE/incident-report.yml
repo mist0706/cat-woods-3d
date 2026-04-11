@@ -1,0 +1,24 @@
+name: Incident Report
+about: Report a service outage or issue
+title: '[INCIDENT] '
+labels: ['incident', 'automation']
+assignees: []
+
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (service completely down)
+        - High (major features affected)
+        - Medium (partial degradation)
+        - Low (minor issues)
+  - type: textarea
+    id: description
+    attributes:
+      label: Incident Description
+  - type: input
+    id: detected
+    attributes:
+      label: Detected At
