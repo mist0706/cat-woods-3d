@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost in the Woods 3D 🐱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            color: white;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #game-canvas {
+            display: block;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(26, 26, 46, 0.95);
+            z-index: 10;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        .screen h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .screen h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: #4ecdc4;
+        }
+
+        .button {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: #4ecdc4;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background: #45b7aa;
+            transform: scale(1.05);
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .hud-item {
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+        }
+
+        .hud-label {
+            color: #4ecdc4;
+            margin-right: 10px;
+        }
+
+        #controls-hint {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.5);
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            z-index: 5;
+        }
+
+        .controls-list {
+            margin-top: 2rem;
+            text-align: left;
+            font-size: 1.1rem;
+            line-height: 2;
+        }
+
+        .controls-list kbd {
+            background: rgba(255,255,255,0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(78, 205, 196, 0.3);
+            border-top-color: #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="menu" class="screen">
+            <h1>🐱 Lost in the Woods</h1>
+            <h2>3D Edition</h2>
+            <button id="startBtn" class="button">Start Game</button>
+            <div class="controls-list">
+                <p>Controls:</p>
+                <p><kbd>W</kbd> <kbd>↑</kbd> Jump</p>
+                <p><kbd>A</kbd> <kbd>←</kbd> Move Left</p>
+                <p><kbd>D</kbd> <kbd>→</kbd> Move Right</p>
+                <p><kbd>S</kbd> <kbd>↓</kbd> Crouch</p>
+                <p><kbd>Shift</kbd> Run (hold while moving)</p>
+                <p><kbd>Space</kbd> Jump</p>
+                <p><kbd>Mouse</kbd> Look around (hold click)</p>
+            </div>
+        </div>
+
+        <div id="hud" class="hidden">
+            <div class="hud-item">
+                <span class="hud-label">Lives:</span>
+                <span id="lives-display">9</span> 🐱
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Score:</span>
+                <span id="score-display">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Level:</span>
+                <span id="level-display">1</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Time:</span>
+                <span id="time-display">00:00</span>
+            </div>
+        </div>
+
+        <div id="controls-hint" class="hidden">
+            <kbd>WASD</kbd> Move • <kbd>Space</kbd> Jump • <kbd>Shift</kbd> Run • <kbd>Mouse</kbd> Look
+        </div>
+
+        <div id="game-over" class="screen hidden">
+            <h1>Game Over</h1>
+            <h2>You lost all your lives! 😿</h2>
+            <p id="final-score">Final Score: 0</p>
+            <button id="restartBtn" class="button">Try Again</button>
+        </div>
+
+        <div id="victory" class="screen hidden">
+            <h1>🎉 You Made It!</h1>
+            <h2>The cat found their way home! 🏠</h2>
+            <p id="victory-score">Final Score: 0</p>
+            <p id="victory-time">Time: 00:00</p>
+            <button id="playAgainBtn" class="button">Play Again</button>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <!-- Import map for Three.js and Cannon.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+    }
+    </script>
+
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>

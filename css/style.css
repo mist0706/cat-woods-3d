@@ -1,0 +1,8 @@
+/* Additional styles can be added here if needed */
+/* Currently using inline styles in HTML for simplicity */
+
+/* Optional: Add tree sway animation for UI elements */
+@keyframes sway {
+    0%, 100% { transform: rotate(-2deg); }
+    50% { transform: rotate(2deg); }
+}
