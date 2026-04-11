@@ -14,6 +14,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initialize game
     const game = new Game(canvas);
     
+    // Expose for debugging/testing
+    window.game = game;
+    
     // Handle resize
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
