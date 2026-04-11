@@ -55,10 +55,10 @@ export class Game {
         // Lighting
         this.setupLighting();
         
-        // Initialize UI
+        // Initialize UI - hide loading when ready
         this.initUI();
         
-        // Hide loading screen
+        // Hide loading screen - safe now that we're constructed
         document.getElementById('loading').classList.add('hidden');
         
         // Animation loop
@@ -89,9 +89,33 @@ export class Game {
     }
     
     initUI() {
-        document.getElementById('startBtn').addEventListener('click', () => this.startGame());
-        document.getElementById('restartBtn').addEventListener('click', () => this.startGame());
-        document.getElementById('playAgainBtn').addEventListener('click', () => this.startGame());
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.startGame();
+            });
+        }
+        
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => this.startGame());
+        }
+        
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        if (playAgainBtn) {
+            playAgainBtn.addEventListener('click', () => this.startGame());
+        }
+        
+        // Keyboard shortcut to start game
+        const checkStartKey = (e) => {
+            if (this.gameState === 'MENU' && (e.code === 'Space' || e.code === 'Enter')) {
+                e.preventDefault();
+                this.startGame();
+            }
+        };
+        window.addEventListener('keydown', checkStartKey);
     }
     
     startGame() {
