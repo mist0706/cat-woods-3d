@@ -57,7 +57,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!window.game) {
             showErrorMessage('Game load timeout. Please refresh and try again.');
         }
-    }, 8000);
+    }, 5000);
     
     try {
         // Set canvas to full window size
