@@ -1,8 +1,8 @@
 /**
  * Enemy AI system - Foxes, Owls, and other hazards
  */
-import * as THREE from '../lib/three.module.js';
-import * as CANNON from '../lib/cannon-es.js';
+import * as THREE from '../vendor/three.module.js';
+import * as CANNON from '../vendor/cannon-es.js';
 
 export class Enemy {
     constructor(type, x, y, z, scene, world) {
