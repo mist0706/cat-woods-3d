@@ -188,17 +188,23 @@ export class Game {
         
         const playerPos = this.player.mesh.position;
         
-        // Camera follow with slight lag
-        const targetX = playerPos.x + 3;
-        const targetY = Math.max(playerPos.y + 4, 3);
-        const targetZ = playerPos.z + 8;
+        // Camera positioned to show FRONT/SIDE of character, not rear
+        // Place camera in front of player (negative Z) so player faces toward camera
+        // Offset X based on facing direction for dynamic viewing angle
+        const targetX = playerPos.x - 2;  // Slightly ahead of player
+        const targetY = Math.max(playerPos.y + 3, 3);  // Lower for better front view
+        const targetZ = playerPos.z - 10;  // In FRONT of player (negative Z)
         
         this.camera.position.lerp(
             new THREE.Vector3(targetX, targetY, targetZ),
             0.1
         );
         
-        this.cameraTarget.lerp(playerPos, 0.1);
+        // Look slightly ahead of player (in direction of movement)
+        this.cameraTarget.lerp(
+            new THREE.Vector3(playerPos.x + 5, playerPos.y + 1, playerPos.z),
+            0.1
+        );
         this.camera.lookAt(this.cameraTarget);
     }
     
