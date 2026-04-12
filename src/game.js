@@ -185,19 +185,20 @@ export class Game {
     
     updateCamera() {
         if (!this.player) return;
-        
+
         const playerPos = this.player.mesh.position;
-        
-        // Camera follow with slight lag
-        const targetX = playerPos.x + 3;
-        const targetY = Math.max(playerPos.y + 4, 3);
-        const targetZ = playerPos.z + 8;
-        
+
+        // Camera positioned to show more of the front/side view
+        // Offset camera to be in front of player for better visibility
+        const targetX = playerPos.x - 5; // Camera in front of player
+        const targetY = Math.max(playerPos.y + 3, 2);
+        const targetZ = playerPos.z + 6; // Side angle for better forward view
+
         this.camera.position.lerp(
             new THREE.Vector3(targetX, targetY, targetZ),
             0.1
         );
-        
+
         this.cameraTarget.lerp(playerPos, 0.1);
         this.camera.lookAt(this.cameraTarget);
     }
@@ -251,30 +252,44 @@ export class Game {
             // Victory!
             this.gameState = 'VICTORY';
             document.getElementById('victory-score').textContent = `Final Score: ${this.score}`;
-            
+
             const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
             const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
             const seconds = (elapsed % 60).toString().padStart(2, '0');
             document.getElementById('victory-time').textContent = `Time: ${minutes}:${seconds}`;
-            
+
             this.showScreen('victory');
             document.getElementById('hud').classList.add('hidden');
             document.getElementById('controls-hint').classList.add('hidden');
         } else {
-            // Next level
-            this.currentLevel++;
+            // Next level - first show level complete notification
             this.score += 100; // Level completion bonus
-            
+
+            // Store next level number before clearing
+            const nextLevel = this.currentLevel + 1;
+
             // Regenerate level
             this.level.clear();
-            this.level.generateLevel(this.currentLevel);
-            
-            // Respawn player
-            this.player.reset(
-                this.level.startPoint.x,
-                this.level.startPoint.y + 2,
-                this.level.startPoint.z
-            );
+            this.level.generateLevel(nextLevel);
+
+            // Update current level after successful generation
+            this.currentLevel = nextLevel;
+
+            // Respawn player - make sure player mesh is visible
+            if (this.player) {
+                this.player.reset(
+                    this.level.startPoint.x,
+                    this.level.startPoint.y + 2,
+                    this.level.startPoint.z
+                );
+                // Ensure player mesh is visible after reset
+                if (this.player.mesh) {
+                    this.player.mesh.visible = true;
+                }
+            }
+
+            // Update HUD to show new level
+            this.updateHUD();
         }
     }
     

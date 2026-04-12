@@ -30,8 +30,8 @@ export class Level {
         this.createPlatform(0, 0, 0, 4, 1, 4, 0x5a7d5a);
         this.startPoint = { x: 0, y: 1, z: 0 };
         
-        // Add some trees around
-        this.addForestDecorations(-length, length);
+        // Add some trees around (only after start area to avoid spawning collectible coin behind start)
+        this.addForestDecorations(5, length * 2);
         
         if (levelNum === 1) {
             this.generateLevel1(length);
@@ -41,8 +41,8 @@ export class Level {
             this.generateLevel3(length);
         }
         
-        // Collectibles
-        this.addCollectibles();
+        // Collectibles - only spawn on right side (positive x) of start position
+        this.addCollectibles(length);
         
         // Goal
         this.createGoal(levelNum * 20, 0, 0);
@@ -272,13 +272,14 @@ export class Level {
         this.decorations.push({ type: 'tree', meshes: [trunk, leaves] });
     }
     
-    addCollectibles() {
-        // Additional coins scattered around
+    addCollectibles(levelLength) {
+        // Additional coins scattered around - only on right side of start (positive x)
         for (let i = 0; i < 20; i++) {
-            const x = (Math.random() - 0.5) * 60;
+            // Spawn coins only to the right of start position (x > 2 to clear start platform)
+            const x = 2 + Math.random() * (levelLength - 2);
             const z = (Math.random() - 0.5) * 4;
             const y = 1 + Math.random() * 3;
-            
+
             this.createCollectible(x, y, z);
         }
     }

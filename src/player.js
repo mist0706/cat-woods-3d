@@ -81,6 +81,16 @@ export class Player {
         this.body.velocity.set(0, 0, 0);
         this.body.angularVelocity.set(0, 0, 0);
         this.isJumping = false;
+
+        // Ensure mesh is re-added to scene (in case it was removed during level.clear)
+        if (this.mesh && !this.mesh.parent) {
+            this.scene.add(this.mesh);
+        }
+
+        // Reset visibility
+        if (this.mesh) {
+            this.mesh.visible = true;
+        }
     }
     
     update(input, dt) {
