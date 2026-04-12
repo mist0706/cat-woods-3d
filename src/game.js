@@ -64,8 +64,8 @@ export class Game {
         this.level = new Level(this.scene, this.world);
         this.player = null;
         
-        // Camera follow offset
-        this.cameraOffset = new THREE.Vector3(0, 5, 10);
+        // Camera follow offset - positioned more front-facing
+        this.cameraOffset = new THREE.Vector3(0, 5, -6);
         this.cameraTarget = new THREE.Vector3();
         
         // Lighting
@@ -225,7 +225,7 @@ export class Game {
     
     updateCamera() {
         if (!this.player) return;
-        
+
         const playerPos = this.player.mesh.position;
         
         // Camera positioned to show FRONT/SIDE of character, not rear
@@ -314,7 +314,10 @@ export class Game {
             // Regenerate level
             this.level.clear();
             this.level.generateLevel(this.currentLevel);
-            
+
+            // Re-add player body to physics world (was removed by clear())
+            this.world.addBody(this.player.body);
+
             // Respawn player
             this.player.reset(
                 this.level.startPoint.x,

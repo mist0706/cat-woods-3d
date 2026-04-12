@@ -294,7 +294,7 @@ export class Level {
             const x = 2 + Math.random() * (levelLength - 2);
             const z = (Math.random() - 0.5) * 4;
             const y = 1 + Math.random() * 3;
-            
+
             this.createCollectible(x, y, z);
         }
     }
