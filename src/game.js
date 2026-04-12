@@ -7,6 +7,14 @@ import { Player } from './player.js';
 import { InputHandler } from './input.js';
 import { Level } from './level.js';
 
+// Helper to hide loading even on error
+function safeHideLoading() {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.classList.add('hidden');
+    }
+}
+
 export class Game {
     constructor(canvas) {
         this.canvas = canvas;
