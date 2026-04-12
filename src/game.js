@@ -365,7 +365,8 @@ export class Game {
         
         this.renderer.render(this.scene, this.camera);
     }
-}    // Auto-play / Health Monitoring Mode
+    
+    // Auto-play / Health Monitoring Mode
     enableAutoPlay() {
         this.autoPlay = true;
         this.autoPlayStartTime = Date.now();
