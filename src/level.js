@@ -422,65 +422,6 @@ export class Level {
         });
     }
 }
-
-/**
- * Collectible coin class
- */
-class Collectible {
-    constructor(x, y, z, scene) {
-        this.scene = scene;
-        this.active = true;
-        this.baseY = y;
-        this.time = Math.random() * Math.PI * 2;
-        
-        const geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8);
-        const material = new THREE.MeshLambertMaterial({ 
-            color: 0xffd700,
-            emissive: 0xaa8800,
-            emissiveIntensity: 0.3
-        });
-        
-        this.mesh = new THREE.Mesh(geometry, material);
-        this.mesh.position.set(x, y, z);
-        this.mesh.rotation.x = Math.PI / 2;
-        this.mesh.castShadow = true;
-        
-        this.scene.add(this.mesh);
-    }
-    
-    update(dt) {
-        this.time += dt * 3;
-        
-        // Bob up and down
-        this.mesh.position.y = this.baseY + Math.sin(this.time) * 0.3;
-        
-        // Rotate
-        this.mesh.rotation.z += dt * 2;
-    }
-    
-    collect() {
-        if (!this.active) return;
-        this.active = false;
-        
-        // Scale down animation
-        const animate = () => {
-            this.mesh.scale.multiplyScalar(0.9);
-            if (this.mesh.scale.x > 0.1) {
-                requestAnimationFrame(animate);
-            } else {
-                this.dispose();
-            }
-        };
-        animate();
-    }
-    
-    dispose() {
-        this.active = false;
-        this.scene.remove(this.mesh);
-        this.mesh.geometry?.dispose();
-        this.mesh.material?.dispose();
-    }
-}
     generateLevel4(length) {
         // Cave theme
         this.currentTheme = 'cave';
@@ -687,5 +628,63 @@ class Collectible {
             this.decorations.push({ type: type, mesh: mesh });
         }
         return mesh;
+    }
+}}
+
+* Collectible coin class
+ */
+class Collectible {
+    constructor(x, y, z, scene) {
+        this.scene = scene;
+        this.active = true;
+        this.baseY = y;
+        this.time = Math.random() * Math.PI * 2;
+        
+        const geometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 8);
+        const material = new THREE.MeshLambertMaterial({ 
+            color: 0xffd700,
+            emissive: 0xaa8800,
+            emissiveIntensity: 0.3
+        });
+        
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.set(x, y, z);
+        this.mesh.rotation.x = Math.PI / 2;
+        this.mesh.castShadow = true;
+        
+        this.scene.add(this.mesh);
+    }
+    
+    update(dt) {
+        this.time += dt * 3;
+        
+        // Bob up and down
+        this.mesh.position.y = this.baseY + Math.sin(this.time) * 0.3;
+        
+        // Rotate
+        this.mesh.rotation.z += dt * 2;
+    }
+    
+    collect() {
+        if (!this.active) return;
+        this.active = false;
+        
+        // Scale down animation
+        const animate = () => {
+            this.mesh.scale.multiplyScalar(0.9);
+            if (this.mesh.scale.x > 0.1) {
+                requestAnimationFrame(animate);
+            } else {
+                this.dispose();
+            }
+        };
+        animate();
+    }
+    
+    dispose() {
+        this.active = false;
+        this.scene.remove(this.mesh);
+        this.mesh.geometry?.dispose();
+        this.mesh.material?.dispose();
     }
 }
