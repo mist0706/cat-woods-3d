@@ -363,13 +363,18 @@ export class Level {
         });
         this.decorations = [];
         
-        // Keep ground clear but remove old bodies
-        this.scene.children = this.scene.children.filter(child => {
-            return child.type === 'AmbientLight' || 
-                   child.type === 'DirectionalLight' || 
-                   child.type === 'Fog' ||
-                   child.isCamera;
+        // Keep ground clear but remove old bodies (preserve lights, camera, player)
+        const childrenToKeep = [];
+        this.scene.children.forEach(child => {
+            if (child.type === 'AmbientLight' || 
+                child.type === 'DirectionalLight' || 
+                child.type === 'Fog' ||
+                child.isCamera ||
+                child.userData?.isPlayerMesh) {  // Preserve player mesh
+                childrenToKeep.push(child);
+            }
         });
+        this.scene.children = childrenToKeep;
     }
 }
 

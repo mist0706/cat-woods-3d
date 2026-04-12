@@ -28,6 +28,7 @@ export class Player {
         const material = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
         this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.castShadow = true;
+        this.mesh.userData.isPlayerMesh = true;  // Mark for preservation during level clear
         this.scene.add(this.mesh);
         
         // Ears
