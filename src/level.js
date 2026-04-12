@@ -4,6 +4,8 @@
  */
 import * as THREE from '../lib/three.module.js';
 import * as CANNON from '../lib/cannon-es.js';
+import { Enemy } from './enemy.js';
+import { PowerUp } from './powerup.js';
 
 export class Level {
     constructor(scene, world) {
@@ -20,25 +22,38 @@ export class Level {
     }
     
     generateLevel(levelNum) {
-        // Level difficulty increases
-        const length = 30 + (levelNum * 10);
+        // Level difficulty increases - longer levels for 20-30 second runs
+        const length = 50 + (levelNum * 15);
         
-        // Ground platform
-        this.createPlatform(0, -1, 0, length * 2, 1, 6, 0x2d4a3e);
+        // Store current theme
+        this.currentTheme = 'forest';
+        this.isSlippery = false;
+        this.isUnderwater = false;
+        this.isLowGravity = false;
+        
+        this.enemies = [];
+        this.powerups = [];
         
         // Start platform
         this.createPlatform(0, 0, 0, 4, 1, 4, 0x5a7d5a);
         this.startPoint = { x: 0, y: 1, z: 0 };
         
-        // Add some trees around
-        this.addForestDecorations(-length, length);
-        
-        if (levelNum === 1) {
-            this.generateLevel1(length);
-        } else if (levelNum === 2) {
-            this.generateLevel2(length);
-        } else {
-            this.generateLevel3(length);
+        // Theme-specific generation
+        switch(levelNum) {
+            case 1: this.generateLevel1(length); break;
+            case 2: this.generateLevel2(length); break;
+            case 3: this.generateLevel3(length); break;
+            case 4: this.generateLevel4(length); break;
+            case 5: this.generateLevel5(length); break;
+            case 6: this.generateLevel6(length); break;
+            case 7: this.generateLevel7(length); break;
+            case 8: this.generateLevel8(length); break;
+            case 9: this.generateLevel9(length); break;
+            case 10: this.generateLevel10(length); break;
+            case 11: this.generateLevel11(length); break;
+            case 12: this.generateLevel12(length); break;
+            case 13: this.generateLevel13(length); break;
+            default: this.generateLevel1(length); break;
         }
         
         // Collectibles
@@ -352,6 +367,20 @@ export class Level {
         });
         this.hazards = [];
         
+        // Remove enemies
+        if (this.enemies) {
+            this.enemies.forEach(e => e.dispose());
+            this.enemies = [];
+        }
+        
+        // Remove powerups
+        if (this.powerups) {
+            this.powerups.forEach(p => {
+                if (p.mesh) this.scene.remove(p.mesh);
+            });
+            this.powerups = [];
+        }
+        
         // Remove decorations
         this.decorations.forEach(d => {
             if (d.type === 'tree') {
@@ -449,5 +478,213 @@ class Collectible {
         this.scene.remove(this.mesh);
         this.mesh.geometry?.dispose();
         this.mesh.material?.dispose();
+    }
+}
+    generateLevel4(length) {
+        // Cave theme
+        this.currentTheme = 'cave';
+        for (let x = 4; x < length; x += 3) {
+            const height = Math.random() * 1.5;
+            const z = (Math.random() - 0.5) * 1.5;
+            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x4a4a5a);
+            
+            // Stalactites
+            if (Math.random() > 0.7) {
+                this.createDecoration(x, height + 5, z, 'stalactite');
+            }
+            
+            // Bats
+            if (x > 15 && Math.random() > 0.7) {
+                this.createEnemy(x, height + 2, z, 'bat');
+            }
+            
+            if (Math.random() > 0.6) {
+                this.createCollectible(x, height + 2, z);
+            }
+        }
+    }
+
+    generateLevel5(length) {
+        // Mountain theme
+        this.currentTheme = 'mountain';
+        let y = 0;
+        for (let x = 4; x < length; x += 4) {
+            y += Math.random() * 2;
+            const z = (Math.random() - 0.5) * 3;
+            this.createPlatform(x, y, z, 3, 0.5, 2.5, 0x8a8a7a);
+            
+            // Eagles
+            if (x > 15 && Math.random() > 0.8) {
+                this.createEnemy(x, y + 5, z, 'eagle');
+            }
+            
+            this.createCollectible(x, y + 3, z);
+        }
+    }
+
+    generateLevel6(length) {
+        // Snow theme
+        this.currentTheme = 'snow';
+        this.isSlippery = true;
+        for (let x = 4; x < length; x += 5) {
+            const height = Math.sin(x * 0.3) * 1.5;
+            const z = Math.sin(x * 0.5) * 2;
+            this.createPlatform(x, height, z, 3, 0.5, 3, 0xeefefe);
+            
+            if (Math.random() > 0.6) {
+                this.createCollectible(x, height + 2.5, z);
+            }
+        }
+    }
+
+    generateLevel7(length) {
+        // Ruins theme
+        this.currentTheme = 'ruins';
+        for (let x = 4; x < length; x += 4) {
+            const height = Math.random() > 0.5 ? 0 : 2;
+            const z = (Math.random() - 0.5) * 2;
+            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x9a8a6a);
+            
+            if (Math.random() > 0.5) {
+                this.createCollectible(x, height + 3, z);
+            }
+        }
+    }
+
+    generateLevel8(length) {
+        // Sky theme
+        this.currentTheme = 'sky';
+        for (let x = 5; x < length; x += 6) {
+            const height = 3 + Math.random() * 4;
+            const z = (Math.random() - 0.5) * 4;
+            this.createPlatform(x, height, z, 3, 1, 3, 0x7addaa);
+            this.createCollectible(x, height + 3, z);
+        }
+    }
+
+    generateLevel9(length) {
+        // Lava theme
+        this.currentTheme = 'lava';
+        for (let x = 4; x < length; x += 4) {
+            const height = Math.random() * 3;
+            const z = (Math.random() - 0.5) * 2;
+            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x4a3a3a);
+            
+            if (Math.random() > 0.7) {
+                this.createHazard(x, height + 1, z);
+            }
+            
+            this.createCollectible(x, height + 3, z);
+        }
+    }
+
+    generateLevel10(length) {
+        // Underwater theme
+        this.currentTheme = 'underwater';
+        this.isUnderwater = true;
+        for (let x = 4; x < length; x += 4) {
+            const height = Math.sin(x * 0.4) * 2;
+            const z = (Math.random() - 0.5) * 3;
+            this.createPlatform(x, height, z, 3, 0.5, 2.5, 0x5a7a9a);
+            
+            // Fish enemies
+            if (x > 10 && Math.random() > 0.6) {
+                this.createEnemy(x, height + 2, z, 'fish');
+            }
+            
+            this.createCollectible(x, height + 2.5, z);
+        }
+    }
+
+    generateLevel11(length) {
+        // Volcano theme
+        this.currentTheme = 'volcano';
+        for (let x = 4; x < length; x += 3) {
+            const height = Math.random() * 2;
+            const z = (Math.random() - 0.5) * 2;
+            this.createPlatform(x, height, z, 2, 0.5, 2, 0x5a4a4a);
+            this.createCollectible(x, height + 3, z);
+        }
+    }
+
+    generateLevel12(length) {
+        // Castle theme with foxes
+        this.currentTheme = 'castle';
+        for (let x = 5; x < length; x += 5) {
+            const height = Math.random() > 0.5 ? 0 : 1.5;
+            const z = (Math.random() - 0.5) * 2;
+            this.createPlatform(x, height, z, 3, 0.5, 2.5, 0x7a7a8a);
+            
+            // Fox guards
+            if (x > 10 && Math.random() > 0.75) {
+                this.createEnemy(x, height + 1, z, 'fox');
+            }
+            
+            this.createCollectible(x, height + 2.5, z);
+        }
+    }
+
+    generateLevel13(length) {
+        // Space theme
+        this.currentTheme = 'space';
+        this.isLowGravity = true;
+        for (let x = 5; x < length; x += 6) {
+            const height = 2 + Math.random() * 3;
+            const z = (Math.random() - 0.5) * 4;
+            this.createPlatform(x, height, z, 2.5, 0.5, 2.5, 0x3a3a5a);
+            this.createCollectible(x, height + 3.5, z);
+        }
+    }
+
+    // Helper methods for level generation
+    createEnemy(x, y, z, type) {
+        const enemy = new Enemy(type, x, y, z, this.scene, this.world);
+        if (!this.enemies) this.enemies = [];
+        this.enemies.push(enemy);
+        return enemy;
+    }
+    
+    createPowerUp(x, y, z, type) {
+        const powerup = new PowerUp(type, x, y, z, this.scene);
+        if (!this.powerups) this.powerups = [];
+        this.powerups.push(powerup);
+        return powerup;
+    }
+    
+    createCollectible(x, y, z) {
+        const collectible = new Collectible(x, y, z, this.scene);
+        this.collectibles.push(collectible);
+        return collectible;
+    }
+    
+    createDecoration(x, y, z, type) {
+        // Basic decoration shapes
+        let mesh;
+        if (type === 'tree') {
+            mesh = this.createTree(x, y, z);
+        } else if (type === 'rock') {
+            const geometry = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5);
+            const material = new THREE.MeshLambertMaterial({ color: 0x666666 });
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y + 0.5, z);
+            this.scene.add(mesh);
+        } else if (type === 'stalactite') {
+            const geometry = new THREE.ConeGeometry(0.15, 2, 6);
+            const material = new THREE.MeshLambertMaterial({ color: 0x777777 });
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y + 3, z);
+            this.scene.add(mesh);
+        } else if (type === 'column') {
+            const geometry = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
+            const material = new THREE.MeshLambertMaterial({ color: 0x9a9a9a });
+            mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y + 1.5, z);
+            this.scene.add(mesh);
+        }
+        
+        if (mesh) {
+            this.decorations.push({ type: type, mesh: mesh });
+        }
+        return mesh;
     }
 }

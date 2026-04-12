@@ -6,6 +6,8 @@ import * as CANNON from '../lib/cannon-es.js';
 import { Player } from './player.js';
 import { InputHandler } from './input.js';
 import { Level } from './level.js';
+import { Enemy } from './enemy.js';
+import { PowerUp, ActivePowerUp } from './powerup.js';
 
 // Helper to hide loading even on error
 function safeHideLoading() {
@@ -50,6 +52,12 @@ export class Game {
         this.world = new CANNON.World();
         this.world.gravity.set(0, -30, 0); // Stronger gravity for platformer feel
         this.world.broadphase = new CANNON.NaiveBroadphase();
+        
+        // Active powerups
+        this.activePowerups = [];
+        
+        // Load high scores
+        this.highScores = this.loadHighScores();
         
         // Subsystems (mirroring 2D architecture)
         this.input = new InputHandler(this.canvas);
@@ -319,5 +327,77 @@ export class Game {
         this.update(dt);
         
         this.renderer.render(this.scene, this.camera);
+    }
+}    // Save/Load System
+    saveProgress() {
+        const saveData = {
+            currentLevel: this.currentLevel,
+            score: this.score,
+            lives: this.lives,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('catWoodsSave', JSON.stringify(saveData));
+    }
+    
+    loadProgress() {
+        try {
+            const saveData = localStorage.getItem('catWoodsSave');
+            if (saveData) {
+                return JSON.parse(saveData);
+            }
+        } catch (e) {
+            console.error('Failed to load progress:', e);
+        }
+        return null;
+    }
+    
+    clearProgress() {
+        localStorage.removeItem('catWoodsSave');
+    }
+    
+    // High Score System
+    loadHighScores() {
+        try {
+            const scores = localStorage.getItem('catWoodsHighScores');
+            if (scores) {
+                return JSON.parse(scores);
+            }
+        } catch (e) {
+            console.error('Failed to load high scores:', e);
+        }
+        return [];
+    }
+    
+    saveHighScore(name, score, time, level) {
+        const entry = {
+            name: name || 'Anonymous',
+            score: score,
+            time: time,
+            level: level,
+            date: new Date().toISOString()
+        };
+        
+        this.highScores.push(entry);
+        // Sort by score descending
+        this.highScores.sort((a, b) => b.score - a.score);
+        // Keep only top 10
+        this.highScores = this.highScores.slice(0, 10);
+        
+        try {
+            localStorage.setItem('catWoodsHighScores', JSON.stringify(this.highScores));
+        } catch (e) {
+            console.error('Failed to save high score:', e);
+        }
+        
+        return entry;
+    }
+    
+    isHighScore(score) {
+        if (this.highScores.length < 10) return true;
+        return score > this.highScores[this.highScores.length - 1].score;
+    }
+    
+    getHighScores() {
+        return this.highScores;
     }
 }
