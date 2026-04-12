@@ -333,7 +333,8 @@ export class Level {
         // Remove all platforms
         this.platforms.forEach(p => {
             this.scene.remove(p.mesh);
-            p.mesh.geometry?.dispose();
+            if (p.mesh.geometry) p.mesh.geometry.dispose();
+            if (p.mesh.material) p.mesh.material.dispose();
             this.world.removeBody(p.body);
         });
         this.platforms = [];
@@ -345,8 +346,9 @@ export class Level {
         // Remove hazards
         this.hazards.forEach(h => {
             this.scene.remove(h.mesh);
-            h.mesh.geometry?.dispose();
-            this.world.removeBody(h.body);
+            if (h.mesh.geometry) h.mesh.geometry.dispose();
+            if (h.mesh.material) h.mesh.material.dispose();
+            this.world.removeBody(h.mesh);
         });
         this.hazards = [];
         
@@ -355,19 +357,38 @@ export class Level {
             if (d.type === 'tree') {
                 d.meshes.forEach(m => {
                     this.scene.remove(m);
+                    if (m.geometry) m.geometry.dispose();
+                    if (m.material) m.material.dispose();
                 });
+            } else if (d.type === 'grass') {
+                this.scene.remove(d.mesh);
+                if (d.mesh.geometry) d.mesh.geometry.dispose();
+                if (d.mesh.material) d.mesh.material.dispose();
+            } else if (d.type === 'particles') {
+                this.scene.remove(d.mesh);
             } else {
                 this.scene.remove(d.mesh);
             }
         });
         this.decorations = [];
         
-        // Keep ground clear but remove old bodies
-        this.scene.children = this.scene.children.filter(child => {
-            return child.type === 'AmbientLight' || 
-                   child.type === 'DirectionalLight' || 
-                   child.type === 'Fog' ||
-                   child.isCamera;
+        // Clear remaining meshes from scene (preserve lights and camera)
+        const toRemove = [];
+        this.scene.children.forEach(child => {
+            if (child.isMesh && !child.isCamera) {
+                toRemove.push(child);
+            }
+        });
+        toRemove.forEach(mesh => {
+            this.scene.remove(mesh);
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) mesh.material.dispose();
+        });
+        
+        // Clear bodies from world
+        const bodies = this.world.bodies.slice();
+        bodies.forEach(body => {
+            this.world.removeBody(body);
         });
     }
 }

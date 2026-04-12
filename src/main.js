@@ -1,7 +1,11 @@
 /**
  * Main entry point - same structure as 2D version
+ * Enhanced with better error handling and module load detection
  */
 import { Game } from './game.js';
+
+// Mark module as loaded for debugging
+window.__moduleLoaded = true;
 
 // Hide loading spinner safely
 function hideLoadingSpinner() {
@@ -29,14 +33,31 @@ function showErrorMessage(message) {
     }
 }
 
+// Global error handler for module loading issues
+window.addEventListener('error', (e) => {
+    console.error('Global error caught:', e.error || e.message);
+    showErrorMessage('Game failed to initialize. Check console for details.');
+});
+
+// Unhandled promise rejection handler
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('Unhandled promise rejection:', e.reason);
+    showErrorMessage('Game failed to load resources. Please refresh.');
+});
+
 // Wait for DOM to load
 window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('game-canvas');
     
     // Safety timeout to hide spinner even if initialization hangs
     const safetyTimeout = setTimeout(() => {
+        console.warn('Safety timeout triggered - game initialization took too long');
         hideLoadingSpinner();
-    }, 5000);
+        // Try to show error state if game didn't load
+        if (!window.game) {
+            showErrorMessage('Game load timeout. Please refresh and try again.');
+        }
+    }, 8000);
     
     try {
         // Set canvas to full window size
@@ -44,10 +65,13 @@ window.addEventListener('DOMContentLoaded', () => {
         canvas.height = window.innerHeight;
         
         // Initialize game
+        console.log('Initializing game...');
         const game = new Game(canvas);
         
         // Expose for debugging/testing
         window.game = game;
+        
+        console.log('Game initialized successfully');
         
         // Clear safety timeout since game initialized successfully
         clearTimeout(safetyTimeout);
@@ -70,6 +94,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
         clearTimeout(safetyTimeout);
         console.error('Game initialization failed:', error);
+        console.error('Error stack:', error.stack);
         showErrorMessage('Game failed to load. Please refresh.');
     }
 });
