@@ -348,7 +348,7 @@ export class Level {
             this.scene.remove(h.mesh);
             if (h.mesh.geometry) h.mesh.geometry.dispose();
             if (h.mesh.material) h.mesh.material.dispose();
-            this.world.removeBody(h.mesh);
+            this.world.removeBody(h.body);
         });
         this.hazards = [];
         
