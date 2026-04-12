@@ -2,8 +2,8 @@
  * Player (Cat) class - 3D version
  * Mirrors the 2D player API but with 3D physics
  */
-import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
+import * as THREE from '../lib/three.module.js';
+import * as CANNON from '../lib/cannon-es.js';
 
 export class Player {
     constructor(x, y, z, scene, world) {
