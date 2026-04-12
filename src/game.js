@@ -1,8 +1,8 @@
 /**
  * Main game orchestrator - 3D version with Three.js + Cannon.js
  */
-import * as THREE from '../lib/three.module.js';
-import * as CANNON from '../lib/cannon-es.js';
+import * as THREE from '../vendor/three.module.js';
+import * as CANNON from '../vendor/cannon-es.js';
 import { Player } from './player.js';
 import { InputHandler } from './input.js';
 import { Level } from './level.js';

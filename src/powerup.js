@@ -1,7 +1,7 @@
 /**
  * Power-up system
  */
-import * as THREE from '../lib/three.module.js';
+import * as THREE from '../vendor/three.module.js';
 
 export class PowerUp {
     constructor(type, x, y, z, scene) {
