@@ -69,6 +69,15 @@ export class Game {
         this.cameraOffset = new THREE.Vector3(3, 5, -8);
         this.cameraTarget = new THREE.Vector3();
         
+        // Orbit camera controls
+        this.cameraDistance = 10;
+        this.cameraYaw = -Math.PI / 4;  // 45 degrees to the right
+        this.cameraPitch = 0.3;         // Slightly down from horizontal
+        this.minPitch = -0.5;
+        this.maxPitch = 1.0;
+        this.minDistance = 5;
+        this.maxDistance = 20;
+        
         // Lighting
         this.setupLighting();
         
@@ -234,22 +243,39 @@ export class Game {
     
     updateCamera() {
         if (!this.player) return;
-
+        
+        // Get mouse deltas for camera control
+        const deltas = this.input.consumeCameraDeltas();
+        
+        // Update orbit angles based on mouse movement
+        this.cameraYaw -= deltas.yaw;   // Horizontal rotation
+        this.cameraPitch += deltas.pitch; // Vertical rotation
+        this.cameraDistance -= deltas.zoom; // Zoom in/out
+        
+        // Clamp values
+        this.cameraPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.cameraPitch));
+        this.cameraDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.cameraDistance));
+        
         const playerPos = this.player.mesh.position;
         
-        // Camera at RIGHT-FRONT-TOP corner looking at player
-        // From the diagram: box corners are (playerX ± offsetX, playerY + offsetY, playerZ - offsetZ)
-        // We want FRONT-RIGHT-TOP: X positive, Z negative (front), Y positive
-        const targetX = playerPos.x + this.cameraOffset.x;  // +3 (to the right)
-        const targetY = playerPos.y + this.cameraOffset.y;
-        const targetZ = playerPos.z + this.cameraOffset.z;  // -8 (in front)
+        // Calculate camera position based on orbit angles
+        // Spherical coordinates: x = r*sin(pitch)*cos(yaw), y = r*sin(pitch)*sin(yaw), z = r*cos(pitch)
+        // But we want the camera to orbit around the player at the center
+        const cosPitch = Math.cos(this.cameraPitch);
+        const sinPitch = Math.sin(this.cameraPitch);
+        const cosYaw = Math.cos(this.cameraYaw);
+        const sinYaw = Math.sin(this.cameraYaw);
+        
+        const cameraX = playerPos.x + this.cameraDistance * cosPitch * sinYaw;
+        const cameraY = playerPos.y + this.cameraDistance * sinPitch + 2; // +2 offset for eyes
+        const cameraZ = playerPos.z + this.cameraDistance * cosPitch * cosYaw;
         
         this.camera.position.lerp(
-            new THREE.Vector3(targetX, targetY, targetZ),
+            new THREE.Vector3(cameraX, cameraY, cameraZ),
             0.1
         );
         
-        // Camera looks directly at player
+        // Camera looks at player
         this.cameraTarget.lerp(
             new THREE.Vector3(playerPos.x, playerPos.y + 1, playerPos.z),
             0.1
