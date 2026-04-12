@@ -243,6 +243,45 @@
         });
     </script>
 
-    <script type="module" src="src/main.js"></script>
+    
+    <script>
+        // Module load monitoring with better error display
+        window.__moduleStatus = 'PENDING';
+        window.__moduleError = null;
+        
+        // Track if module loads within reasonable time
+        const moduleTimeout = setTimeout(() => {
+            if (window.__moduleStatus !== 'READY' && window.__moduleStatus !== 'FAILED') {
+                console.error('Module timeout - game did not initialize within 5 seconds');
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px; max-width: 80%;">Game module failed to load.<br>Please ensure your browser supports ES modules.<br><br>If using Docker/Nginx, ensure MIME types are set correctly for .js files.</div>';
+                }
+                window.__moduleStatus = 'TIMEOUT';
+            }
+        }, 5000);
+        
+        // Monitor script error events
+        window.addEventListener('error', function(e) {
+            console.error('Script error:', e.error || e.message);
+            window.__moduleError = e.error || e.message;
+            if (window.__moduleStatus === 'PENDING') {
+                window.__moduleStatus = 'SCRIPT_ERROR';
+            }
+        });
+        
+        // Monitor unhandled promise rejections (module loading failures)
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled rejection:', e.reason);
+            window.__moduleError = e.reason;
+            if (window.__moduleStatus === 'PENDING') {
+                window.__moduleStatus = 'MODULE_ERROR';
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px; max-width: 80%;">Failed to load game modules.<br>Browser may not support ES modules or import failed.<br><br>Error: ' + (e.reason && e.reason.message || 'Unknown error') + '</div>';
+                }
+            }
+        });
+    </script>\n\n    \1
 </body>
 </html>
