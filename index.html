@@ -215,6 +215,24 @@
         <canvas id="game-canvas"></canvas>
     </div>
 
+
+    <!-- Module loading detection script -->
+    <script>
+        // Track if module loaded successfully
+        window.__moduleStatus = 'PENDING';
+        
+        // Check if game initialized
+        setInterval(() => {
+            if (!window.__moduleLoaded && window.__moduleStatus === 'PENDING') {
+                window.__moduleStatus = 'FAILED';
+                console.error('Module loading failed - game object not available');
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px; max-width: 80%;">Game failed to load.<br>Your browser may not support ES modules from the local server.<br>Try a modern browser with ES modules enabled.</div>';
+                }
+            }
+        }, 3000);
+    </script>
     <!-- Module dependencies are now imported directly via relative paths in source files -->
     <script>
         // Global error handler for module loading failures
