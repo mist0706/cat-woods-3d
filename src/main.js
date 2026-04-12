@@ -12,6 +12,17 @@ function hideLoadingSpinner() {
     const loading = document.getElementById('loading');
     if (loading) {
         loading.classList.add('hidden');
+        // Force display none for older browsers
+        loading.style.display = 'none';
+    }
+}
+
+// Show loading spinner
+function showLoadingSpinner() {
+    const loading = document.getElementById('loading');
+    if (loading) {
+        loading.classList.remove('hidden');
+        loading.style.display = 'flex';
     }
 }
 
@@ -21,6 +32,7 @@ function showErrorMessage(message) {
     const menu = document.getElementById('menu');
     if (menu) {
         menu.classList.remove('hidden');
+        menu.style.display = 'flex';
         const startBtn = document.getElementById('startBtn');
         if (startBtn) {
             startBtn.style.display = 'none';
@@ -45,11 +57,30 @@ window.addEventListener('unhandledrejection', (e) => {
     showErrorMessage('Game failed to load resources. Please refresh.');
 });
 
+// Module loading failure detection
+window.addEventListener('load', () => {
+    // If we're still loading after window.load, something is wrong
+    setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading && !loading.classList.contains('hidden')) {
+            console.error('Loading screen still visible after window load');
+            showErrorMessage('Game modules failed to load. Please check browser console.');
+        }
+    }, 1000);
+});
+
 // Wait for DOM to load
 window.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('game-canvas');
+    console.log('DOM loaded, initializing game...');
     
-    // Safety timeout to hide spinner even if initialization hangs
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) {
+        console.error('Game canvas not found');
+        showErrorMessage('Game canvas element missing');
+        return;
+    }
+    
+    // Safety timeout to hide spinner even if initialization hangs (extended to 10s)
     const safetyTimeout = setTimeout(() => {
         console.warn('Safety timeout triggered - game initialization took too long');
         hideLoadingSpinner();
@@ -57,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!window.game) {
             showErrorMessage('Game load timeout. Please refresh and try again.');
         }
-    }, 5000);
+    }, 10000); // Extended from 5s to 10s
     
     try {
         // Set canvas to full window size
@@ -65,7 +96,7 @@ window.addEventListener('DOMContentLoaded', () => {
         canvas.height = window.innerHeight;
         
         // Initialize game
-        console.log('Initializing game...');
+        console.log('Creating Game instance...');
         const game = new Game(canvas);
         
         // Expose for debugging/testing
@@ -95,6 +126,6 @@ window.addEventListener('DOMContentLoaded', () => {
         clearTimeout(safetyTimeout);
         console.error('Game initialization failed:', error);
         console.error('Error stack:', error.stack);
-        showErrorMessage('Game failed to load. Please refresh.');
+        showErrorMessage('Game failed to load: ' + (error.message || 'Unknown error'));
     }
 });
