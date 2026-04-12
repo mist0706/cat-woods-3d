@@ -57,7 +57,7 @@ export class Level {
         }
         
         // Collectibles
-        this.addCollectibles();
+        this.addCollectibles(length);
         
         // Goal
         this.createGoal(levelNum * 20, 0, 0);
@@ -287,10 +287,11 @@ export class Level {
         this.decorations.push({ type: 'tree', meshes: [trunk, leaves] });
     }
     
-    addCollectibles() {
-        // Additional coins scattered around
+    addCollectibles(levelLength) {
+        // Additional coins scattered around - only on right side (positive x)
         for (let i = 0; i < 20; i++) {
-            const x = (Math.random() - 0.5) * 60;
+            // Spawn coins only to the right of start position (x >= 2 to clear start platform)
+            const x = 2 + Math.random() * (levelLength - 2);
             const z = (Math.random() - 0.5) * 4;
             const y = 1 + Math.random() * 3;
             
