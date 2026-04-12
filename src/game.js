@@ -77,6 +77,9 @@ export class Game {
         // Hide loading screen - safe now that we're constructed
         document.getElementById('loading').classList.add('hidden');
         
+        // Auto-play / test mode for health monitoring
+        this.autoPlay = false;
+
         // Animation loop
         this.lastTime = 0;
         this.animate = this.animate.bind(this);
@@ -195,6 +198,11 @@ export class Game {
     
     update(dt) {
         if (this.gameState !== 'PLAYING') return;
+        
+        // Auto-play mode for health monitoring
+        if (this.autoPlay) {
+            this.handleAutoPlay(dt);
+        }
         
         // Step physics world
         this.world.step(1/60);
@@ -337,7 +345,102 @@ export class Game {
         
         this.renderer.render(this.scene, this.camera);
     }
-}    // Save/Load System
+}    // Auto-play / Health Monitoring Mode
+    enableAutoPlay() {
+        this.autoPlay = true;
+        this.autoPlayStartTime = Date.now();
+        this.autoPlayReachedGoal = false;
+        console.log('[AUTO-PLAY] Enabled - will complete Level 1 automatically');
+    }
+    
+    disableAutoPlay() {
+        this.autoPlay = false;
+        console.log('[AUTO-PLAY] Disabled');
+    }
+    
+    handleAutoPlay(dt) {
+        if (!this.player) return;
+        
+        const playerPos = this.player.body.position;
+        const goalPos = this.level.endPoint;
+        
+        // Calculate distance to goal (only X matters since goal is at y=0, z=0)
+        const dx = goalPos.x - playerPos.x;
+        const dy = goalPos.y - playerPos.y;
+        const distanceToGoal = Math.sqrt(dx * dx + dy * dy);
+        
+        // Track progress for health monitoring
+        if (!window.autoPlayProgress) {
+            window.autoPlayProgress = {
+                startTime: this.autoPlayStartTime,
+                maxX: playerPos.x,
+                reachedGoal: false
+            };
+        }
+        window.autoPlayProgress.maxX = Math.max(window.autoPlayProgress.maxX, playerPos.x);
+        
+        // Auto-move player toward goal
+        const moveSpeed = this.player.runSpeed || 14;
+        
+        // Move right constantly
+        if (dx > 2) {
+            // Move right toward goal
+            this.player.body.velocity.x = moveSpeed;
+        } else if (dx < -2) {
+            // Move left if somehow past goal
+            this.player.body.velocity.x = -moveSpeed;
+        } else {
+            // Near goal - stop horizontal movement
+            this.player.body.velocity.x = 0;
+        }
+        
+        // Jump if there's a height difference or obstacle
+        if (dy > 1 && this.player.isOnGround) {
+            this.player.body.velocity.y = this.player.jumpForce || 12;
+        }
+        
+        // Auto-collect coins (magnet-like behavior)
+        this.level.collectibles.forEach(coin => {
+            if (coin.active) {
+                const coinDx = coin.mesh.position.x - playerPos.x;
+                const coinDy = coin.mesh.position.y - playerPos.y;
+                const coinDist = Math.sqrt(coinDx * coinDx + coinDy * coinDy);
+                if (coinDist < 3 && playerPos.y < coin.mesh.position.y) {
+                    // Jump to collect
+                    if (this.player.isOnGround) {
+                        this.player.body.velocity.y = this.player.jumpForce || 12;
+                    }
+                }
+            }
+        });
+        
+        // Check if reached goal
+        if (distanceToGoal < 2.5 && !this.autoPlayReachedGoal) {
+            this.autoPlayReachedGoal = true;
+            window.autoPlayProgress.reachedGoal = true;
+            console.log('[AUTO-PLAY] Level 1 completed successfully!');
+            // Don't disable - let it keep playing through levels
+        }
+    }
+    
+    // Export auto-play status for health monitoring
+    getAutoPlayStatus() {
+        return {
+            enabled: this.autoPlay,
+            reachedGoal: this.autoPlayReachedGoal,
+            progress: window.autoPlayProgress || null,
+            level: this.currentLevel,
+            score: this.score,
+            lives: this.lives,
+            playerPosition: this.player ? {
+                x: this.player.body.position.x,
+                y: this.player.body.position.y,
+                z: this.player.body.position.z
+            } : null
+        };
+    }
+
+    // Save/Load System
     saveProgress() {
         const saveData = {
             currentLevel: this.currentLevel,

@@ -99,8 +99,42 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Creating Game instance...');
         const game = new Game(canvas);
         
-        // Expose for debugging/testing
+        // Expose debugging/testing functions
         window.game = game;
+        
+        // Auto-play mode for health monitoring
+        window.enableGameAutoPlay = () => {
+            if (window.game && window.game.enableAutoPlay) {
+                window.game.enableAutoPlay();
+                return 'Auto-play enabled';
+            }
+            return 'Game not ready yet';
+        };
+        
+        window.disableGameAutoPlay = () => {
+            if (window.game && window.game.disableAutoPlay) {
+                window.game.disableAutoPlay();
+                return 'Auto-play disabled';
+            }
+            return 'Game not ready yet';
+        };
+        
+        window.getGameStatus = () => {
+            if (window.game && window.game.getAutoPlayStatus) {
+                return window.game.getAutoPlayStatus();
+            }
+            return { error: 'Game not initialized' };
+        };
+        
+        // Start game and enable auto-play (for health monitoring)
+        window.startGameAndAutoPlay = () => {
+            if (window.game && window.game.gameState === 'MENU') {
+                window.game.startGame();
+                setTimeout(() => window.game.enableAutoPlay(), 500);
+                return 'Game started, auto-play will enable in 500ms';
+            }
+            return 'Game not in menu or not ready';
+        };
         
         console.log('Game initialized successfully');
         
