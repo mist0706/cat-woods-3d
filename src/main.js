@@ -90,6 +90,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }, 10000); // Extended from 5s to 10s
     
+    // Module load tracking - update status when script runs
+    window.__moduleStatus = 'LOADING';
+    
     try {
         // Set canvas to full window size
         canvas.width = window.innerWidth;
