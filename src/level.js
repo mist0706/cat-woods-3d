@@ -2,8 +2,8 @@
  * Level generator - 3D version
  * Creates platforms, obstacles, collectibles, and atmosphere
  */
-import * as THREE from 'three';
-import * as CANNON from 'cannon-es';
+import * as THREE from '../lib/three.module.js';
+import * as CANNON from '../lib/cannon-es.js';
 
 export class Level {
     constructor(scene, world) {

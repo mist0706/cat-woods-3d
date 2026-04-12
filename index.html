@@ -214,14 +214,14 @@
         <canvas id="game-canvas"></canvas>
     </div>
 
-    <!-- Import map for Three.js and Cannon.js (bundled locally - no CDN dependencies) -->
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "./lib/three.module.js",
-            "cannon-es": "./lib/cannon-es.js"
-        }
-    }
+    <!-- Module dependencies are now imported directly via relative paths in source files -->
+    <script>
+        // Global error handler for module loading failures
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('module')) {
+                document.getElementById('loading').innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px;">Failed to load game modules. Please check your browser supports ES modules.</div>';
+            }
+        });
     </script>
 
     <script type="module" src="src/main.js"></script>
