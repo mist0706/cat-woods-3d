@@ -187,19 +187,27 @@ export class Game {
         if (!this.player) return;
 
         const playerPos = this.player.mesh.position;
-
-        // Camera positioned to show more of the front/side view
-        // Offset camera to be in front of player for better visibility
-        const targetX = playerPos.x - 5; // Camera in front of player
-        const targetY = Math.max(playerPos.y + 3, 2);
-        const targetZ = playerPos.z + 6; // Side angle for better forward view
+        const isFacingRight = this.player.facingRight;
+        
+        // FIX: Better camera angle showing more front of character
+        // Camera positioned behind player (in direction they're running from)
+        // so player faces camera more, showing front/side instead of rear
+        const cameraOffsetX = isFacingRight ? -12 : 12; // Further behind when facing right
+        const targetX = playerPos.x + cameraOffsetX;
+        const targetY = Math.max(playerPos.y + 5, 3); // Higher up for better angle
+        const targetZ = playerPos.z + 8; // More to the side for better forward visibility
 
         this.camera.position.lerp(
             new THREE.Vector3(targetX, targetY, targetZ),
-            0.1
+            0.08 // Slightly slower lerp for smoother follow
         );
 
-        this.cameraTarget.lerp(playerPos, 0.1);
+        // Look slightly ahead of player to show where they're going
+        const lookAheadX = playerPos.x + (isFacingRight ? 5 : -5);
+        this.cameraTarget.lerp(
+            new THREE.Vector3(lookAheadX, playerPos.y + 1, playerPos.z),
+            0.1
+        );
         this.camera.lookAt(this.cameraTarget);
     }
     
