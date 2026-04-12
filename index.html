@@ -214,12 +214,11 @@
         <canvas id="game-canvas"></canvas>
     </div>
 
-    <!-- Import map for Three.js and Cannon.js (bundled locally) -->
+    <!-- Import map for Three.js and Cannon.js (bundled locally - no CDN dependencies) -->
     <script type="importmap">
     {
         "imports": {
             "three": "./lib/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
             "cannon-es": "./lib/cannon-es.js"
         }
     }
