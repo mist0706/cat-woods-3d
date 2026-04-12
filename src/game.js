@@ -64,8 +64,9 @@ export class Game {
         this.level = new Level(this.scene, this.world);
         this.player = null;
         
-        // Camera follow offset - positioned more front-facing
-        this.cameraOffset = new THREE.Vector3(0, 5, -6);
+        // Camera follow offset - positioned at RIGHT-FRONT-TOP
+        // X is positive (right of player), Z is negative (front of player), Y is up
+        this.cameraOffset = new THREE.Vector3(3, 5, -8);
         this.cameraTarget = new THREE.Vector3();
         
         // Lighting
@@ -236,21 +237,21 @@ export class Game {
 
         const playerPos = this.player.mesh.position;
         
-        // Camera positioned to show FRONT/SIDE of character, not rear
-        // Place camera in front of player (negative Z) so player faces toward camera
-        // Offset X based on facing direction for dynamic viewing angle
-        const targetX = playerPos.x - 2;  // Slightly ahead of player
-        const targetY = Math.max(playerPos.y + 3, 3);  // Lower for better front view
-        const targetZ = playerPos.z - 10;  // In FRONT of player (negative Z)
+        // Camera at RIGHT-FRONT-TOP corner looking at player
+        // From the diagram: box corners are (playerX ± offsetX, playerY + offsetY, playerZ - offsetZ)
+        // We want FRONT-RIGHT-TOP: X positive, Z negative (front), Y positive
+        const targetX = playerPos.x + this.cameraOffset.x;  // +3 (to the right)
+        const targetY = playerPos.y + this.cameraOffset.y;
+        const targetZ = playerPos.z + this.cameraOffset.z;  // -8 (in front)
         
         this.camera.position.lerp(
             new THREE.Vector3(targetX, targetY, targetZ),
             0.1
         );
         
-        // Look slightly ahead of player (in direction of movement)
+        // Camera looks directly at player
         this.cameraTarget.lerp(
-            new THREE.Vector3(playerPos.x + 5, playerPos.y + 1, playerPos.z),
+            new THREE.Vector3(playerPos.x, playerPos.y + 1, playerPos.z),
             0.1
         );
         this.camera.lookAt(this.cameraTarget);
