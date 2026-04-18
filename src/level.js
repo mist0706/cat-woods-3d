@@ -421,7 +421,7 @@ export class Level {
             this.world.removeBody(body);
         });
     }
-}
+
     generateLevel4(length) {
         // Cave theme
         this.currentTheme = 'cave';
@@ -631,8 +631,9 @@ export class Level {
     }
 }}
 
+/**
 * Collectible coin class
- */
+*/
 class Collectible {
     constructor(x, y, z, scene) {
         this.scene = scene;
