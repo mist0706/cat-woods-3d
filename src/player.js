@@ -1,6 +1,8 @@
 /**
- * Player (Cat) class - 3D version
- * Mirrors the 2D player API but with 3D physics
+ * Player (Cat) class - 3D version with Fortnite-style movement
+ * - Camera-relative movement (WASD moves relative to where you look)
+ * - Smooth character rotation toward movement direction
+ * - Separate jump from ArrowUp
  */
 import * as THREE from '../vendor/three.module.js';
 import * as CANNON from '../vendor/cannon-es.js';
@@ -18,7 +20,7 @@ export class Player {
             shape: shape,
             linearDamping: 0.1,
             angularDamping: 0.5,
-            fixedRotation: true // Prevent tipping over
+            fixedRotation: true
         });
         this.body.material = new CANNON.Material({ friction: 0.3 });
         this.world.addBody(this.body);
@@ -61,19 +63,22 @@ export class Player {
         this.rightEye.position.set(0.2, 0.2, 0.4);
         this.mesh.add(this.rightEye);
         
-        // Movement constants (same logic as 2D)
-        this.moveSpeed = 8;
+        // Movement constants
+        this.walkSpeed = 8;
         this.runSpeed = 14;
         this.jumpForce = 12;
         this.isJumping = false;
         this.isOnGround = false;
-        this.facingRight = true;
+        
+        // Smooth rotation target
+        this.targetRotation = 0;
+        this.rotationSpeed = 0.15; // How fast cat turns to face movement
+        
+        // Track if moving this frame (for animation)
+        this.isMoving = false;
         
         // Animation
         this.animationTime = 0;
-        
-        // Raycaster for ground detection
-        this.raycaster = new THREE.Raycaster();
     }
     
     reset(x, y, z) {
@@ -81,78 +86,65 @@ export class Player {
         this.body.velocity.set(0, 0, 0);
         this.body.angularVelocity.set(0, 0, 0);
         this.isJumping = false;
+        this.isOnGround = false;
+        
+        // Remove from old parent if any, re-add to scene
+        if (this.mesh.parent && this.mesh.parent !== this.scene) {
+            this.mesh.parent.remove(this.mesh);
+        }
+        if (!this.mesh.parent) {
+            this.scene.add(this.mesh);
+        }
+        this.mesh.visible = true;
     }
     
     update(input, dt) {
-        // Check ground contact
         this.checkGroundContact();
         
-        // Handle movement (X and Z axis for 3D)
-        const isRunning = input.isShift();
-        const speed = isRunning ? this.runSpeed : this.moveSpeed;
+        // Get camera-relative movement vector from input
+        const moveDir = input.getMovementVector();
         
-        let moveX = 0;
-        let moveZ = 0;
+        const isSprinting = input.isSprint();
+        const speed = isSprinting ? this.runSpeed : this.walkSpeed;
         
-        if (input.isLeft()) {
-            moveX = -speed;
-            this.facingRight = false;
-        }
-        if (input.isRight()) {
-            moveX = speed;
-            this.facingRight = true;
-        }
-        if (input.isUp()) {
-            moveZ = -speed; // Forward
-        }
-        if (input.isDown()) {
-            moveZ = speed; // Backward
-        }
+        // Apply camera-relative movement velocity
+        const moveX = moveDir.x * speed;
+        const moveZ = moveDir.z * speed;
         
-        // Apply movement velocity
+        this.isMoving = (moveX !== 0 || moveZ !== 0);
+        
         const currentVel = this.body.velocity;
         this.body.velocity.set(moveX, currentVel.y, moveZ);
         
-        // Jump
+        // Jump (Space only, not ArrowUp)
         if (input.isJump() && this.isOnGround && !this.isJumping) {
             this.body.velocity.y = this.jumpForce;
             this.isJumping = true;
             this.isOnGround = false;
         }
         
-        // Update mesh position/rotation from physics
-        this.mesh.position.copy(this.body.position);
-        
-        // Rotate based on facing direction
-        if (this.facingRight) {
-            this.mesh.rotation.y = 0;
-        } else {
-            this.mesh.rotation.y = Math.PI;
+        // Smooth rotation toward movement direction
+        if (this.isMoving) {
+            this.targetRotation = Math.atan2(moveX, moveZ);
+            
+            // Smoothly interpolate current rotation toward target
+            let diff = this.targetRotation - this.mesh.rotation.y;
+            // Normalize angle difference to [-PI, PI]
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            this.mesh.rotation.y += diff * this.rotationSpeed;
         }
         
-        // Update animation
-        this.animate(dt, moveX !== 0 || moveZ !== 0);
+        // Update mesh position from physics
+        this.mesh.position.copy(this.body.position);
+        
+        // Animation
+        this.animate(dt);
     }
     
     checkGroundContact() {
-        // Simple raycast down to check ground
-        const rayFrom = this.body.position;
-        const rayTo = new CANNON.Vec3(
-            rayFrom.x,
-            rayFrom.y - 0.8,
-            rayFrom.z
-        );
-        
-        const ray = new CANNON.Ray(rayFrom, rayTo);
-        ray.from.copy(rayFrom);
-        ray.to.copy(rayTo);
-        
-        // Check for ground contact
-        // In a full implementation, we'd use a convex cast or sensor
-        // For now, we track based on vertical velocity
+        // Track ground contact based on vertical velocity
         if (this.body.velocity.y === 0 || Math.abs(this.body.velocity.y) < 0.1) {
-            // Check position relative to platform heights
-            // Simplified: assume ground contact below certain Y
             if (this.body.position.y > -1) {
                 this.isOnGround = true;
                 this.isJumping = false;
@@ -160,10 +152,10 @@ export class Player {
         }
     }
     
-    animate(dt, isMoving) {
+    animate(dt) {
         this.animationTime += dt;
         
-        if (isMoving && this.isOnGround) {
+        if (this.isMoving && this.isOnGround) {
             // Running animation - bounce slightly
             this.mesh.position.y += Math.sin(this.animationTime * 15) * 0.05;
             
@@ -177,7 +169,7 @@ export class Player {
         
         // Jump pose
         if (!this.isOnGround) {
-            this.tail.rotation.x = -Math.PI / 3; // Tail up
+            this.tail.rotation.x = -Math.PI / 3;
             this.leftEar.rotation.z = -0.2;
             this.rightEar.rotation.z = 0.2;
         } else {
@@ -188,7 +180,6 @@ export class Player {
     }
     
     takeDamage() {
-        // Visual feedback - flash red
         this.mesh.material.color.setHex(0xff0000);
         setTimeout(() => {
             this.mesh.material.color.setHex(0xff8c00);

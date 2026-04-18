@@ -1,98 +1,106 @@
 /**
- * Input handler - keyboard and mouse for 3D
- * Mirrors the 2D version but adds camera controls
+ * Input handler - Fortnite-style controls
+ * - Pointer Lock for free mouse look (click canvas to lock, ESC to unlock)
+ * - Camera yaw/pitch tracked inside input handler
+ * - WASD for camera-relative movement
+ * - Space for jump (ArrowUp no longer jumps)
+ * - Shift for sprint
  */
 export class InputHandler {
     constructor(canvas) {
-        this.keys = {};
         this.canvas = canvas;
+        this.keys = {};
         
-        // Mouse camera controls
-        this.mouseX = 0;
-        this.mouseY = 0;
-        this.isRightMouseDown = false;
-        this.mouseDeltaX = 0;
-        this.mouseDeltaY = 0;
+        // Pointer lock state
+        this.isPointerLocked = false;
+        
+        // Camera angles (driven by mouse movement when locked)
+        this.cameraYaw = 0;
+        this.cameraPitch = 0.3;
         this.scrollDelta = 0;
         
-        // Bind event handlers
+        // Sensitivity
+        this.mouseSensitivity = 0.002;
+        
+        // Camera limits
+        this.minPitch = -0.5;
+        this.maxPitch = 1.2;
+        this.minDistance = 5;
+        this.maxDistance = 20;
+        this.cameraDistance = 10;
+        
+        // Bind all handlers
         this.onKeyDown = this.onKeyDown.bind(this);
         this.onKeyUp = this.onKeyUp.bind(this);
-        this.onMouseDown = this.onMouseDown.bind(this);
-        this.onMouseUp = this.onMouseUp.bind(this);
         this.onMouseMove = this.onMouseMove.bind(this);
         this.onWheel = this.onWheel.bind(this);
+        this.onPointerLockChange = this.onPointerLockChange.bind(this);
+        this.onCanvasClick = this.onCanvasClick.bind(this);
         this.onContextMenu = this.onContextMenu.bind(this);
         
-        // Add listeners
+        // Keyboard
         window.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('keyup', this.onKeyUp);
-        canvas.addEventListener('mousedown', this.onMouseDown);
-        window.addEventListener('mouseup', this.onMouseUp);
-        canvas.addEventListener('mousemove', this.onMouseMove);
-        canvas.addEventListener('wheel', this.onWheel, { passive: false });
-        canvas.addEventListener('contextmenu', this.onContextMenu);
+        
+        // Mouse
+        document.addEventListener('mousemove', this.onMouseMove);
+        this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
+        this.canvas.addEventListener('contextmenu', this.onContextMenu);
+        this.canvas.addEventListener('click', this.onCanvasClick);
+        
+        // Pointer lock
+        document.addEventListener('pointerlockchange', this.onPointerLockChange);
     }
     
-    onMouseDown(e) {
-        if (e.button === 2) { // Right click
-            this.isRightMouseDown = true;
-            this.lastMouseX = e.clientX;
-            this.lastMouseY = e.clientY;
+    onCanvasClick(e) {
+        if (!this.isPointerLocked) {
+            this.canvas.requestPointerLock();
         }
     }
     
-    onMouseUp(e) {
-        if (e.button === 2) {
-            this.isRightMouseDown = false;
-        }
+    onPointerLockChange() {
+        this.isPointerLocked = document.pointerLockElement === this.canvas;
     }
     
     onMouseMove(e) {
-        this.mouseX = e.clientX;
-        this.mouseY = e.clientY;
-        
-        if (this.isRightMouseDown) {
-            this.mouseDeltaX += e.movementX;
-            this.mouseDeltaY += e.movementY;
+        if (this.isPointerLocked) {
+            this.cameraYaw -= e.movementX * this.mouseSensitivity;
+            this.cameraPitch += e.movementY * this.mouseSensitivity;
+            this.cameraPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.cameraPitch));
         }
     }
     
     onWheel(e) {
         e.preventDefault();
         this.scrollDelta += e.deltaY;
+        this.cameraDistance += e.deltaY * 0.01;
+        this.cameraDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.cameraDistance));
     }
     
     onContextMenu(e) {
-        e.preventDefault(); // Prevent right-click menu
-    }
-    
-    // Consume deltas (call once per frame)
-    consumeCameraDeltas() {
-        const deltas = {
-            yaw: this.mouseDeltaX * 0.005,
-            pitch: this.mouseDeltaY * 0.005,
-            zoom: this.scrollDelta * 0.001
-        };
-        this.mouseDeltaX = 0;
-        this.mouseDeltaY = 0;
-        this.scrollDelta = 0;
-        return deltas;
+        e.preventDefault();
     }
     
     onKeyDown(e) {
         this.keys[e.code] = true;
         
         // Prevent scroll with space/arrows
-        if ([
-            'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'
-        ].includes(e.code)) {
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
             e.preventDefault();
         }
     }
     
     onKeyUp(e) {
         this.keys[e.code] = false;
+    }
+    
+    // Movement input methods (WASD only, camera-relative)
+    isForward() {
+        return this.keys['KeyW'] || this.keys['ArrowUp'];
+    }
+    
+    isBackward() {
+        return this.keys['KeyS'] || this.keys['ArrowDown'];
     }
     
     isLeft() {
@@ -103,28 +111,67 @@ export class InputHandler {
         return this.keys['KeyD'] || this.keys['ArrowRight'];
     }
     
-    isUp() {
-        return this.keys['KeyW'] || this.keys['ArrowUp'];
-    }
-    
-    isDown() {
-        return this.keys['KeyS'] || this.keys['ArrowDown'];
-    }
-    
     isJump() {
-        return this.keys['Space'] || this.keys['ArrowUp'];
+        return this.keys['Space'];
     }
     
-    isShift() {
+    isSprint() {
         return this.keys['ShiftLeft'] || this.keys['ShiftRight'];
     }
     
     isAnyMovement() {
-        return this.isLeft() || this.isRight() || this.isUp() || this.isDown();
+        return this.isForward() || this.isBackward() || this.isLeft() || this.isRight();
+    }
+    
+    /**
+     * Returns movement direction in world space based on camera yaw.
+     * Fortnite-style: W = toward where camera looks, A/D = strafe left/right
+     */
+    getMovementVector() {
+        let forward = 0;
+        let right = 0;
+        
+        if (this.isForward()) forward += 1;
+        if (this.isBackward()) forward -= 1;
+        if (this.isRight()) right += 1;
+        if (this.isLeft()) right -= 1;
+        
+        // Normalize diagonal movement
+        if (forward !== 0 && right !== 0) {
+            const len = Math.sqrt(forward * forward + right * right);
+            forward /= len;
+            right /= len;
+        }
+        
+        // Transform to world space using camera yaw
+        // Camera looks along -Z in its local space when yaw=0
+        const cos = Math.cos(this.cameraYaw);
+        const sin = Math.sin(this.cameraYaw);
+        
+        // Forward direction (where camera looks) in world space
+        // Camera forward = (-sin(yaw), 0, -cos(yaw))
+        // Right direction = (cos(yaw), 0, -sin(yaw))
+        const worldX = right * cos + forward * (-sin);
+        const worldZ = right * (-sin) + forward * (-cos);
+        
+        return { x: worldX, z: worldZ };
     }
     
     dispose() {
         window.removeEventListener('keydown', this.onKeyDown);
         window.removeEventListener('keyup', this.onKeyUp);
+        document.removeEventListener('mousemove', this.onMouseMove);
+        document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+        
+        if (this.canvas) {
+            this.canvas.removeEventListener('wheel', this.onWheel);
+            this.canvas.removeEventListener('contextmenu', this.onContextMenu);
+            this.canvas.removeEventListener('click', this.onCanvasClick);
+        }
+        
+        // Release pointer lock if held
+        if (this.isPointerLocked) {
+            document.exitPointerLock();
+        }
     }
 }

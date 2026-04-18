@@ -110,6 +110,25 @@
             z-index: 5;
         }
 
+        #lock-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            z-index: 6;
+            pointer-events: none;
+            border: 2px solid rgba(78, 205, 196, 0.5);
+            text-align: center;
+        }
+
+        #lock-prompt.hidden {
+            display: none;
+        }
+
         .controls-list {
             margin-top: 2rem;
             text-align: left;
@@ -162,15 +181,14 @@
             <h2>3D Edition</h2>
             <button id="startBtn" class="button">Start Game</button>
             <div class="controls-list">
-                <p>Controls:</p>
-                <p><kbd>W</kbd> <kbd>↑</kbd> Jump</p>
-                <p><kbd>A</kbd> <kbd>←</kbd> Move Left</p>
-                <p><kbd>D</kbd> <kbd>→</kbd> Move Right</p>
-                <p><kbd>S</kbd> <kbd>↓</kbd> Crouch</p>
-                <p><kbd>Shift</kbd> Run (hold while moving)</p>
+                <p>Controls (Fortnite-style):</p>
+                <p><kbd>Click</kbd> to lock mouse</p>
+                <p><kbd>Mouse</kbd> Look around</p>
+                <p><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> Move (relative to camera)</p>
+                <p><kbd>Shift</kbd> Sprint</p>
                 <p><kbd>Space</kbd> Jump</p>
-                <p><kbd>Right Click</kbd> + Drag Orbit Camera</p>
                 <p><kbd>Scroll</kbd> Zoom In/Out</p>
+                <p><kbd>ESC</kbd> Unlock mouse</p>
             </div>
         </div>
 
@@ -194,7 +212,11 @@
         </div>
 
         <div id="controls-hint" class="hidden">
-            <kbd>WASD</kbd> Move • <kbd>Space</kbd> Jump • <kbd>Shift</kbd> Run • <kbd>Right Click</kbd> + Drag Orbit • <kbd>Scroll</kbd> Zoom
+            <kbd>WASD</kbd> Move • <kbd>Space</kbd> Jump • <kbd>Shift</kbd> Sprint • <kbd>Mouse</kbd> Look • <kbd>Scroll</kbd> Zoom • <kbd>ESC</kbd> Unlock
+        </div>
+
+        <div id="lock-prompt" class="hidden">
+            Click to lock mouse 🖱️
         </div>
 
         <div id="game-over" class="screen hidden">

@@ -1,5 +1,8 @@
 /**
- * Main game orchestrator - 3D version with Three.js + Cannon.js
+ * Main game orchestrator - 3D version with Fortnite-style controls
+ * - Pointer lock for free mouse look
+ * - Camera-relative movement
+ * - Smooth character rotation
  */
 import * as THREE from '../vendor/three.module.js';
 import * as CANNON from '../vendor/cannon-es.js';
@@ -21,7 +24,7 @@ export class Game {
     constructor(canvas) {
         this.canvas = canvas;
         
-        // Game state (same as 2D version)
+        // Game state
         this.score = 0;
         this.gameState = 'MENU';
         this.currentLevel = 1;
@@ -50,7 +53,7 @@ export class Game {
         
         // Cannon.js physics world
         this.world = new CANNON.World();
-        this.world.gravity.set(0, -30, 0); // Stronger gravity for platformer feel
+        this.world.gravity.set(0, -30, 0);
         this.world.broadphase = new CANNON.NaiveBroadphase();
         
         // Active powerups
@@ -59,32 +62,21 @@ export class Game {
         // Load high scores
         this.highScores = this.loadHighScores();
         
-        // Subsystems (mirroring 2D architecture)
+        // Subsystems
         this.input = new InputHandler(this.canvas);
         this.level = new Level(this.scene, this.world);
         this.player = null;
         
-        // Camera follow offset - positioned at RIGHT-FRONT-TOP
-        // X is positive (right of player), Z is negative (front of player), Y is up
-        this.cameraOffset = new THREE.Vector3(3, 5, -8);
+        // Camera target for smooth follow
         this.cameraTarget = new THREE.Vector3();
-        
-        // Orbit camera controls
-        this.cameraDistance = 10;
-        this.cameraYaw = -Math.PI / 4;  // 45 degrees to the right
-        this.cameraPitch = 0.3;         // Slightly down from horizontal
-        this.minPitch = -0.5;
-        this.maxPitch = 1.0;
-        this.minDistance = 5;
-        this.maxDistance = 20;
         
         // Lighting
         this.setupLighting();
         
-        // Initialize UI - hide loading when ready
+        // Initialize UI
         this.initUI();
         
-        // Hide loading screen - safe now that we're constructed
+        // Hide loading screen
         document.getElementById('loading').classList.add('hidden');
         
         // Auto-play / test mode for health monitoring
@@ -97,11 +89,9 @@ export class Game {
     }
     
     setupLighting() {
-        // Ambient light (moonlight feel)
         const ambientLight = new THREE.AmbientLight(0x404080, 0.3);
         this.scene.add(ambientLight);
         
-        // Directional light (sun/moon)
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(-20, 50, -20);
         dirLight.castShadow = true;
@@ -172,6 +162,11 @@ export class Game {
             this.world
         );
         
+        // Reset camera yaw to face forward
+        this.input.cameraYaw = 0;
+        this.input.cameraPitch = 0.3;
+        this.input.cameraDistance = 10;
+        
         // Update UI
         this.hideScreens();
         document.getElementById('hud').classList.remove('hidden');
@@ -183,6 +178,8 @@ export class Game {
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('game-over').classList.add('hidden');
         document.getElementById('victory').classList.add('hidden');
+        const lockPrompt = document.getElementById('lock-prompt');
+        if (lockPrompt) lockPrompt.classList.add('hidden');
     }
     
     showScreen(id) {
@@ -190,9 +187,9 @@ export class Game {
     }
     
     onResize() {
-        this.camera.aspect = this.canvas.width / this.canvas.height;
+        this.camera.aspect = this.canvas.width / canvas.height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.canvas.width, this.canvas.height);
+        this.renderer.setSize(canvas.width, canvas.height);
     }
     
     updateHUD() {
@@ -209,6 +206,16 @@ export class Game {
     update(dt) {
         if (this.gameState !== 'PLAYING') return;
         
+        // Show/hide pointer lock prompt during gameplay
+        const lockPrompt = document.getElementById('lock-prompt');
+        if (lockPrompt) {
+            if (!this.input.isPointerLocked) {
+                lockPrompt.classList.remove('hidden');
+            } else {
+                lockPrompt.classList.add('hidden');
+            }
+        }
+        
         // Auto-play mode for health monitoring
         if (this.autoPlay) {
             this.handleAutoPlay(dt);
@@ -217,7 +224,7 @@ export class Game {
         // Step physics world
         this.world.step(1/60);
         
-        // Update player
+        // Update player (now uses camera-relative movement from input)
         this.player.update(this.input, dt);
         
         // Update level animations
@@ -234,7 +241,7 @@ export class Game {
         // Check level completion
         this.checkLevelComplete();
         
-        // Update camera to follow player
+        // Update camera (Fortnite-style: orbits based on input's yaw/pitch)
         this.updateCamera();
         
         // Update HUD
@@ -244,31 +251,32 @@ export class Game {
     updateCamera() {
         if (!this.player) return;
         
-        // Orbit camera controls
-        if (this.input && this.input.isRightMouseDown !== undefined) {
-            const deltas = this.input.consumeCameraDeltas();
-            this.cameraYaw -= deltas.yaw;
-            this.cameraPitch += deltas.pitch;
-            this.cameraDistance -= deltas.zoom;
-            this.cameraPitch = Math.max(this.minPitch, Math.min(this.maxPitch, this.cameraPitch));
-            this.cameraDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.cameraDistance));
-        }
-        
         const playerPos = this.player.mesh.position;
-        const cosPitch = Math.cos(this.cameraPitch);
-        const sinPitch = Math.sin(this.cameraPitch);
-        const cosYaw = Math.cos(this.cameraYaw);
-        const sinYaw = Math.sin(this.cameraYaw);
         
-        const cameraX = playerPos.x + this.cameraDistance * cosPitch * sinYaw;
-        const cameraY = playerPos.y + this.cameraDistance * sinPitch + 2;
-        const cameraZ = playerPos.z + this.cameraDistance * cosPitch * cosYaw;
+        // Use input handler's camera angles (driven by mouse with pointer lock)
+        const yaw = this.input.cameraYaw;
+        const pitch = this.input.cameraPitch;
+        const distance = this.input.cameraDistance;
         
+        // Calculate camera position using spherical coordinates
+        const cosPitch = Math.cos(pitch);
+        const sinPitch = Math.sin(pitch);
+        const cosYaw = Math.cos(yaw);
+        const sinYaw = Math.sin(yaw);
+        
+        // Camera orbits behind the player based on yaw
+        // Negative sin/cos so that when yaw=0, camera is behind the cat (positive Z)
+        const cameraX = playerPos.x - distance * cosPitch * sinYaw;
+        const cameraY = playerPos.y + distance * sinPitch + 2;
+        const cameraZ = playerPos.z - distance * cosPitch * cosYaw;
+        
+        // Smooth follow with lerp
         this.camera.position.lerp(
             new THREE.Vector3(cameraX, cameraY, cameraZ),
             0.1
         );
         
+        // Look at player (slightly above center)
         this.cameraTarget.lerp(
             new THREE.Vector3(playerPos.x, playerPos.y + 1, playerPos.z),
             0.1
@@ -310,6 +318,10 @@ export class Game {
             this.showScreen('game-over');
             document.getElementById('hud').classList.add('hidden');
             document.getElementById('controls-hint').classList.add('hidden');
+            const lockPrompt = document.getElementById('lock-prompt');
+            if (lockPrompt) lockPrompt.classList.add('hidden');
+            // Release pointer lock on game over
+            if (document.pointerLockElement) document.exitPointerLock();
         } else {
             // Respawn at start
             this.player.reset(
@@ -337,15 +349,15 @@ export class Game {
         } else {
             // Next level
             this.currentLevel++;
-            this.score += 100; // Level completion bonus
+            this.score += 100;
             
             // Regenerate level
             this.level.clear();
             this.level.generateLevel(this.currentLevel);
-
-            // Re-add player body to physics world (was removed by clear())
+            
+            // Re-add player body to physics world
             this.world.addBody(this.player.body);
-
+            
             // Respawn player
             this.player.reset(
                 this.level.startPoint.x,
@@ -385,7 +397,6 @@ export class Game {
         const playerPos = this.player.body.position;
         const goalPos = this.level.endPoint;
         
-        // Calculate distance to goal (only X matters since goal is at y=0, z=0)
         const dx = goalPos.x - playerPos.x;
         const dy = goalPos.y - playerPos.y;
         const distanceToGoal = Math.sqrt(dx * dx + dy * dy);
@@ -400,51 +411,42 @@ export class Game {
         }
         window.autoPlayProgress.maxX = Math.max(window.autoPlayProgress.maxX, playerPos.x);
         
-        // Auto-move player toward goal
+        // Auto-move player directly (bypasses input since we control velocity directly)
         const moveSpeed = this.player.runSpeed || 14;
         
-        // Move right constantly
         if (dx > 2) {
-            // Move right toward goal
             this.player.body.velocity.x = moveSpeed;
         } else if (dx < -2) {
-            // Move left if somehow past goal
             this.player.body.velocity.x = -moveSpeed;
         } else {
-            // Near goal - stop horizontal movement
             this.player.body.velocity.x = 0;
         }
         
-        // Jump if there's a height difference or obstacle
+        // Jump if there's height difference or obstacle
         if (dy > 1 && this.player.isOnGround) {
             this.player.body.velocity.y = this.player.jumpForce || 12;
         }
         
-        // Auto-collect coins (magnet-like behavior)
-        this.level.collectibles.forEach(coin => {
-            if (coin.active) {
-                const coinDx = coin.mesh.position.x - playerPos.x;
-                const coinDy = coin.mesh.position.y - playerPos.y;
-                const coinDist = Math.sqrt(coinDx * coinDx + coinDy * coinDy);
-                if (coinDist < 3 && playerPos.y < coin.mesh.position.y) {
-                    // Jump to collect
-                    if (this.player.isOnGround) {
-                        this.player.body.velocity.y = this.player.jumpForce || 12;
-                    }
-                }
-            }
-        });
+        // Keep Z velocity at 0 for auto-play (simple forward movement)
+        this.player.body.velocity.z = 0;
+        
+        // Rotate cat to face movement direction
+        if (Math.abs(dx) > 0.5) {
+            const targetRot = dx > 0 ? 0 : Math.PI;
+            let diff = targetRot - this.player.mesh.rotation.y;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            this.player.mesh.rotation.y += diff * this.player.rotationSpeed;
+        }
         
         // Check if reached goal
         if (distanceToGoal < 2.5 && !this.autoPlayReachedGoal) {
             this.autoPlayReachedGoal = true;
             window.autoPlayProgress.reachedGoal = true;
-            console.log('[AUTO-PLAY] Level 1 completed successfully!');
-            // Don't disable - let it keep playing through levels
+            console.log('[AUTO-PLAY] Level completed successfully!');
         }
     }
     
-    // Export auto-play status for health monitoring
     getAutoPlayStatus() {
         return {
             enabled: this.autoPlay,
@@ -511,9 +513,7 @@ export class Game {
         };
         
         this.highScores.push(entry);
-        // Sort by score descending
         this.highScores.sort((a, b) => b.score - a.score);
-        // Keep only top 10
         this.highScores = this.highScores.slice(0, 10);
         
         try {
