@@ -629,11 +629,11 @@ export class Level {
         }
         return mesh;
     }
-}}
+}
 
 /**
-* Collectible coin class
-*/
+ * Collectible coin class
+ */
 class Collectible {
     constructor(x, y, z, scene) {
         this.scene = scene;
