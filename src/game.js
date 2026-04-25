@@ -35,7 +35,7 @@ export class Game {
         // Three.js setup
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x1a1a2e);
-        this.scene.fog = new THREE.Fog(0x1a1a2e, 20, 100);
+        this.scene.fog = new THREE.Fog(0x1a1a2e, 40, 200);
         
         this.camera = new THREE.PerspectiveCamera(
             75, 
@@ -96,11 +96,11 @@ export class Game {
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
         dirLight.position.set(-20, 50, -20);
         dirLight.castShadow = true;
-        dirLight.shadow.camera.left = -50;
-        dirLight.shadow.camera.right = 50;
-        dirLight.shadow.camera.top = 50;
-        dirLight.shadow.camera.bottom = -50;
-        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -100;
+        dirLight.shadow.camera.right = 100;
+        dirLight.shadow.camera.top = 100;
+        dirLight.shadow.camera.bottom = -100;
+        dirLight.shadow.camera.far = 200;
         dirLight.shadow.mapSize.width = 2048;
         dirLight.shadow.mapSize.height = 2048;
         this.scene.add(dirLight);
@@ -238,8 +238,9 @@ export class Game {
         // Update level animations
         this.level.update(dt);
         
-        // Check for hazards (falling off)
-        if (this.player.body.position.y < -20) {
+        // Check for falling off — respawn on base (no instant death from falling)
+        // Still die if way below the base (fell through somehow)
+        if (this.player.body.position.y < -30) {
             this.onPlayerDeath();
         }
         
@@ -341,7 +342,7 @@ export class Game {
     }
     
     onLevelComplete() {
-        if (this.currentLevel >= 3) {
+        if (this.currentLevel >= 13) {
             // Victory!
             this.gameState = 'VICTORY';
             document.getElementById('victory-score').textContent = `Final Score: ${this.score}`;

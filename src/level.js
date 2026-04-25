@@ -1,6 +1,8 @@
 /**
- * Level generator - 3D version
- * Creates platforms, obstacles, collectibles, and atmosphere
+ * Level generator - 3D version with large base platform
+ * Each level has a ground platform you can't fall off,
+ * with climbing platforms and structures leading to an elevated exit.
+ * The goal is UP, not forward.
  */
 import * as THREE from '../vendor/three.module.js';
 import * as CANNON from '../vendor/cannon-es.js';
@@ -22,7 +24,7 @@ export class Level {
     }
     
     generateLevel(levelNum) {
-        // Level difficulty increases - longer levels for 20-30 second runs
+        // Level difficulty increases
         const length = 50 + (levelNum * 15);
         
         // Store current theme
@@ -30,15 +32,24 @@ export class Level {
         this.isSlippery = false;
         this.isUnderwater = false;
         this.isLowGravity = false;
+        this.baseY = -1; // Base platform top surface Y
         
         this.enemies = [];
         this.powerups = [];
         
-        // Start platform
-        this.createPlatform(0, 0, 0, 4, 1, 4, 0x5a7d5a);
-        this.startPoint = { x: 0, y: 1, z: 0 };
+        // === LARGE BASE PLATFORM — you can't fall off ===
+        const baseColor = this.getBaseColor(levelNum);
+        const baseSize = 60 + levelNum * 5; // Gets wider with levels
+        this.createPlatform(0, this.baseY - 0.5, 0, baseSize, 1, baseSize, baseColor);
         
-        // Theme-specific generation
+        // Ground decorations (grass, etc on the base)
+        this.addBaseDecorations(baseSize, levelNum);
+        
+        // Start marker on the base
+        this.startPoint = { x: 0, y: this.baseY + 1, z: 0 };
+        this.createStartMarker(0, this.baseY + 1, 0);
+        
+        // Theme-specific generation: climbing platforms, enemies, hazards
         switch(levelNum) {
             case 1: this.generateLevel1(length); break;
             case 2: this.generateLevel2(length); break;
@@ -56,72 +67,308 @@ export class Level {
             default: this.generateLevel1(length); break;
         }
         
-        // Collectibles
+        // Collectibles scattered on and around platforms
         this.addCollectibles(length);
         
-        // Goal
-        this.createGoal(levelNum * 20, 0, 0);
+        // Goal — elevated, requiring climbing
+        const goalHeight = 8 + levelNum * 2;
+        this.createGoal(0, this.baseY + goalHeight, 0);
     }
     
+    getBaseColor(levelNum) {
+        const colors = [
+            0x5a7d5a, // 1 forest
+            0x6a8d6a, // 2 deeper forest
+            0x4a6a4a, // 3 dark forest
+            0x4a4a5a, // 4 cave
+            0x8a8a7a, // 5 mountain
+            0xd0e8e8, // 6 snow
+            0x8a7a6a, // 7 ruins
+            0x7acce8, // 8 sky
+            0x5a2a1a, // 9 lava
+            0x3a5a7a, // 10 underwater
+            0x6a3a2a, // 11 volcano
+            0x7a7a8a, // 12 castle
+            0x2a2a4a, // 13 space
+        ];
+        return colors[Math.min(levelNum - 1, colors.length - 1)];
+    }
+    
+    // Level 1: Forest — gentle introduction, wide platforms, slow ramp up
     generateLevel1(length) {
-        // Simple stepping stones
-        for (let i = 5; i < length; i += 5) {
-            const height = Math.random() * 2 - 1;
-            this.createPlatform(i, height, 0, 2, 0.5, 2, 0x7a9d7a);
-            
-            // Add coins above platforms
-            this.createCollectible(i, height + 2, 0);
+        this.currentTheme = 'forest';
+        // Stepped pyramid — easy to climb
+        const steps = 6;
+        for (let i = 1; i <= steps; i++) {
+            const size = 10 - i * 1.2;
+            const y = this.baseY + i * 1.5;
+            this.createPlatform(0, y, 0, size, 0.5, size, 0x7a9d7a);
+            // Coins on each step
+            this.createCollectible(0, y + 2, 0);
         }
-        
-        // Some hazards (spikes)
-        for (let i = 8; i < length; i += 12) {
-            this.createHazard(i, 0, Math.random() > 0.5 ? 1.5 : -1.5);
-        }
+        // Side platforms with coins
+        this.createPlatform(8, this.baseY + 3, 0, 4, 0.5, 4, 0x8aad7a);
+        this.createCollectible(8, this.baseY + 5, 0);
+        this.createPlatform(-8, this.baseY + 5, 0, 4, 0.5, 4, 0x8aad7a);
+        this.createCollectible(-8, this.baseY + 7, 0);
     }
     
+    // Level 2: Wider forest — platforms spread out, some jumping required
     generateLevel2(length) {
-        // Platforms with gaps
-        let x = 4;
-        while (x < length) {
-            const platformWidth = 2 + Math.random() * 2;
-            const gap = 2 + Math.random() * 2;
-            const height = (Math.random() - 0.5) * 3;
-            const z = (Math.random() - 0.5) * 2;
-            
-            this.createPlatform(x, height, z, platformWidth, 0.5, 2, 0x8a9d7a);
-            
-            // Moving platforms (animated)
-            if (Math.random() > 0.7) {
-                this.createMovingPlatform(x + gap, height, z, 2, 0.5, 2);
+        this.currentTheme = 'forest';
+        // Staircase along Z axis
+        for (let i = 1; i <= 7; i++) {
+            const x = (i % 2 === 0 ? 5 : -3) * (i > 4 ? 0.8 : 1);
+            const z = (i - 1) * 4 - 8;
+            const y = this.baseY + i * 1.8;
+            this.createPlatform(x, y, z, 4, 0.5, 4, 0x8a9d7a);
+            this.createCollectible(x, y + 2, z);
+        }
+        // Moving platform challenge
+        this.createMovingPlatform(0, this.baseY + 8, 0, 3, 0.5, 3);
+        // Side reward platform
+        this.createPlatform(12, this.baseY + 6, 5, 3, 0.5, 3, 0x6a8d6a);
+        this.createCollectible(12, this.baseY + 8, 5);
+    }
+    
+    // Level 3: Dense forest — tighter jumps, vertical towers
+    generateLevel3(length) {
+        this.currentTheme = 'forest';
+        // Central tower
+        this.createPlatform(0, this.baseY + 3, 0, 5, 0.5, 5, 0x9aad7a);
+        this.createPlatform(0, this.baseY + 6, 0, 4, 0.5, 4, 0x8a9d6a);
+        this.createPlatform(0, this.baseY + 9, 0, 3, 0.5, 3, 0x7a8d5a);
+        // Branch platforms
+        const branches = [
+            [6, this.baseY + 4, -5], [-6, this.baseY + 4, -3],
+            [5, this.baseY + 7, 5], [-5, this.baseY + 7, 4],
+            [8, this.baseY + 10, 0], [-7, this.baseY + 10, -2]
+        ];
+        branches.forEach(([x, y, z]) => {
+            this.createPlatform(x, y, z, 3, 0.5, 3, 0xaadd7a);
+            this.createCollectible(x, y + 2, z);
+        });
+    }
+    
+    // Level 4: Cave — darker, tighter, with stalactites
+    generateLevel4(length) {
+        this.currentTheme = 'cave';
+        // Stone pillars rising from the ground
+        const pillarPositions = [
+            [0, 4], [5, 3], [-5, -2], [8, -4], [-8, 0],
+            [3, -6], [-3, 5], [0, -3]
+        ];
+        pillarPositions.forEach(([x, z], i) => {
+            const h = 2 + i * 0.8;
+            const y = this.baseY + h;
+            const size = 3 - i * 0.1;
+            this.createPlatform(x, y, z, size, 0.5, size, 0x4a4a5a);
+            if (i % 2 === 0) {
+                this.createCollectible(x, y + 2, z);
             }
-            
-            x += platformWidth + gap;
-            
+            // Stalactites from ceiling (visual)
             if (Math.random() > 0.5) {
-                this.createCollectible(x - gap/2, height + 2.5, z);
+                this.createDecoration(x + 1, y + 5, z, 'stalactite');
             }
+        });
+        // Bat enemies
+        this.createEnemy(3, this.baseY + 5, -2, 'bat');
+        this.createEnemy(-5, this.baseY + 6, 2, 'bat');
+    }
+    
+    // Level 5: Mountain — ascending switchback path
+    generateLevel5(length) {
+        this.currentTheme = 'mountain';
+        // Switchback path going up
+        const heights = [2, 3.5, 5, 6.5, 8, 9.5, 11, 13];
+        heights.forEach((h, i) => {
+            const side = i % 2 === 0 ? 1 : -1;
+            const x = side * (5 + (i % 3) * 2);
+            const z = (i - 3) * 3;
+            this.createPlatform(x, this.baseY + h, z, 5, 0.5, 3, 0x8a8a7a);
+            this.createCollectible(x, this.baseY + h + 2, z);
+            if (i % 3 === 2) {
+                this.createEnemy(x, this.baseY + h + 1, z, 'eagle');
+            }
+        });
+    }
+    
+    // Level 6: Snow — slippery surfaces
+    generateLevel6(length) {
+        this.currentTheme = 'snow';
+        this.isSlippery = true;
+        // Wide icy platforms
+        this.createPlatform(0, this.baseY + 2, 0, 8, 0.5, 8, 0xeefefe);
+        this.createPlatform(0, this.baseY + 4, 0, 7, 0.5, 7, 0xdde8e8);
+        this.createPlatform(0, this.baseY + 6, 0, 6, 0.5, 6, 0xccdada);
+        // Icy stepping stones off to the sides
+        for (let i = 1; i <= 5; i++) {
+            const angle = (i / 5) * Math.PI * 2;
+            const x = Math.cos(angle) * 10;
+            const z = Math.sin(angle) * 10;
+            this.createPlatform(x, this.baseY + 3 + i * 1.5, z, 3, 0.5, 3, 0xeefefe);
+            this.createCollectible(x, this.baseY + 5 + i * 1.5, z);
         }
     }
     
-    generateLevel3(length) {
-        // Complex layout
-        for (let x = 5; x < length; x += 4) {
-            const height = Math.sin(x * 0.5) * 2 + 1;
-            const width = 2 + Math.random() * 3;
-            
-            this.createPlatform(x, height, 0, width, 0.5, 2, 0x9aad7a);
-            
-            // Vertical challenges
-            if (Math.random() > 0.6) {
-                this.createPlatform(x, height + 3, 0, 1, 0.5, 1, 0xaadd7a);
-                this.createCollectible(x, height + 5, 0);
+    // Level 7: Ruins — crumbled pillars and gaps
+    generateLevel7(length) {
+        this.currentTheme = 'ruins';
+        // Scattered ruined pillars
+        const ruins = [
+            [0, 2.5, 0], [4, 4, -4], [-4, 3, 4], [6, 5.5, 2],
+            [-6, 4, -3], [0, 7, 6], [3, 6, 5], [-5, 6, -5],
+            [8, 8, 0], [-3, 9, -6], [0, 10.5, 0]
+        ];
+        ruins.forEach(([x, y, z], i) => {
+            const size = 2 + Math.random() * 2;
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x9a8a6a);
+            if (i % 2 === 1) {
+                this.createCollectible(x, this.baseY + y + 2, z);
             }
-            
-            // More hazards
-            if (x > 10 && Math.random() > 0.5) {
-                this.createHazard(x - 1, height - 1, 0);
+            // Columns as decoration
+            if (Math.random() > 0.5) {
+                this.createDecoration(x + 1, this.baseY + y, z + 1, 'column');
             }
+        });
+    }
+    
+    // Level 8: Sky — floating islands
+    generateLevel8(length) {
+        this.currentTheme = 'sky';
+        // Floating islands at various heights
+        const islands = [
+            [0, 3, 0, 6], [6, 5, -3, 4], [-6, 5, 3, 4],
+            [0, 8, 6, 5], [8, 7, 0, 3], [-8, 7, -5, 3],
+            [4, 10, -6, 4], [-4, 11, 6, 4],
+            [0, 13, 0, 5]
+        ];
+        islands.forEach(([x, y, z, size]) => {
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x7addaa);
+            this.createCollectible(x, this.baseY + y + 2, z);
+        });
+        // Eagle patrollers
+        this.createEnemy(5, this.baseY + 8, 0, 'eagle');
+        this.createEnemy(-5, this.baseY + 10, 0, 'eagle');
+    }
+    
+    // Level 9: Lava — platforms over danger
+    generateLevel9(length) {
+        this.currentTheme = 'lava';
+        // Lava pools on the base (hazards)
+        for (let i = 0; i < 4; i++) {
+            const x = (Math.random() - 0.5) * 20;
+            const z = (Math.random() - 0.5) * 20;
+            this.createHazard(x, this.baseY + 1.5, z);
         }
+        // Rising platforms
+        const climbs = [
+            [0, 3, 0, 5], [4, 5, 3, 3], [-4, 5, -3, 3],
+            [0, 7, 0, 4], [6, 9, -2, 3], [-5, 9, 4, 3],
+            [0, 11, 0, 4], [3, 13, 3, 3], [-2, 14, 0, 5]
+        ];
+        climbs.forEach(([x, y, z, size]) => {
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x4a3a3a);
+            this.createCollectible(x, this.baseY + y + 2, z);
+        });
+        this.createEnemy(0, this.baseY + 8, 0, 'bat');
+    }
+    
+    // Level 10: Underwater
+    generateLevel10(length) {
+        this.currentTheme = 'underwater';
+        this.isUnderwater = true;
+        // Coral-like platforms
+        const platforms = [
+            [0, 2, 0, 6], [5, 3.5, -4, 4], [-5, 4, 4, 4],
+            [0, 6, -6, 5], [7, 7, 0, 3], [-7, 7, -2, 3],
+            [3, 9, 5, 4], [-3, 9, -5, 4],
+            [0, 11, 0, 5], [6, 13, 3, 3], [-5, 13, -4, 3],
+            [0, 15, 0, 4]
+        ];
+        platforms.forEach(([x, y, z, size]) => {
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x5a7a9a);
+            this.createCollectible(x, this.baseY + y + 2, z);
+        });
+        this.createEnemy(4, this.baseY + 5, -3, 'fish');
+        this.createEnemy(-4, this.baseY + 6, 3, 'fish');
+    }
+    
+    // Level 11: Volcano
+    generateLevel11(length) {
+        this.currentTheme = 'volcano';
+        // Volcanic rock formations
+        const rocks = [
+            [0, 2, 0, 6], [4, 3, -4, 3], [-4, 3.5, 4, 3],
+            [6, 5, 0, 3], [-6, 5.5, -3, 3], [0, 7, 5, 4],
+            [5, 9, -5, 3], [-5, 9.5, 5, 3],
+            [3, 11, 0, 3], [-3, 12, -4, 3],
+            [0, 14, 0, 5]
+        ];
+        rocks.forEach(([x, y, z, size]) => {
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x5a4a4a);
+            this.createCollectible(x, this.baseY + y + 2, z);
+            if (Math.random() > 0.7) {
+                this.createHazard(x + 1, this.baseY + y + 1, z);
+            }
+        });
+        this.createEnemy(0, this.baseY + 8, 0, 'bat');
+    }
+    
+    // Level 12: Castle — guard foxes
+    generateLevel12(length) {
+        this.currentTheme = 'castle';
+        // Castle tower structure
+        this.createPlatform(0, this.baseY + 2, 0, 8, 0.5, 8, 0x7a7a8a);
+        // Corner turrets
+        const corners = [[6, 6], [6, -6], [-6, 6], [-6, -6]];
+        corners.forEach(([x, z], i) => {
+            this.createPlatform(x, this.baseY + 4, z, 3, 0.5, 3, 0x8a8a9a);
+            this.createPlatform(x, this.baseY + 7, z, 2, 0.5, 2, 0x7a7a8a);
+            this.createCollectible(x, this.baseY + 9, z);
+            // Fox guard
+            this.createEnemy(x, this.baseY + 5, z, 'fox');
+        });
+        // Central tower
+        this.createPlatform(0, this.baseY + 6, 0, 5, 0.5, 5, 0x8a8a9a);
+        this.createPlatform(0, this.baseY + 9, 0, 4, 0.5, 4, 0x7a7a8a);
+        this.createPlatform(0, this.baseY + 12, 0, 3, 0.5, 3, 0x6a6a7a);
+        // Battlement connections
+        this.createPlatform(3, this.baseY + 7.5, 0, 2, 0.5, 8, 0x8a8a9a);
+        this.createPlatform(-3, this.baseY + 7.5, 0, 2, 0.5, 8, 0x8a8a9a);
+        this.createPlatform(0, this.baseY + 7.5, 3, 8, 0.5, 2, 0x8a8a9a);
+        this.createPlatform(0, this.baseY + 7.5, -3, 8, 0.5, 2, 0x8a8a9a);
+    }
+    
+    // Level 13: Space — low gravity, big jumps
+    generateLevel13(length) {
+        this.currentTheme = 'space';
+        this.isLowGravity = true;
+        // Floating asteroid platforms
+        const asteroids = [
+            [0, 3, 0, 5], [5, 5, -5, 3], [-5, 5, 5, 3],
+            [0, 8, 7, 4], [7, 7, 3, 3], [-7, 9, -5, 3],
+            [3, 11, -8, 3], [-3, 12, 8, 3],
+            [8, 14, -3, 4], [-8, 13, 3, 4],
+            [0, 16, 0, 4], [5, 18, 0, 3], [-4, 19, 0, 3],
+            [0, 21, 0, 5]
+        ];
+        asteroids.forEach(([x, y, z, size]) => {
+            this.createPlatform(x, this.baseY + y, z, size, 0.5, size, 0x3a3a5a);
+            this.createCollectible(x, this.baseY + y + 2, z);
+        });
+        this.createEnemy(5, this.baseY + 7, 0, 'asteroid');
+        this.createEnemy(-5, this.baseY + 12, 0, 'asteroid');
+    }
+    
+    createStartMarker(x, y, z) {
+        // Glowing start pad on the base
+        const geo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 16);
+        const mat = new THREE.MeshLambertMaterial({ color: 0x4ecdc4, emissive: 0x2a7a70, emissiveIntensity: 0.5 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y - 0.1, z);
+        this.scene.add(mesh);
+        this.decorations.push({ type: 'startMarker', mesh });
     }
     
     createPlatform(x, y, z, width, height, depth, color) {
@@ -189,25 +436,34 @@ export class Level {
     }
     
     createGoal(x, y, z) {
-        // Goal house/tree/pole
-        const geometry = new THREE.CylinderGeometry(0.3, 0.3, 4, 8);
-        const material = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
-        const pole = new THREE.Mesh(geometry, material);
-        pole.position.set(x, y + 2, z);
-        pole.castShadow = true;
-        this.scene.add(pole);
+        // Glowing portal/doorway
+        // Arc frame
+        const frameGeo = new THREE.TorusGeometry(1.5, 0.15, 8, 16, Math.PI);
+        const frameMat = new THREE.MeshLambertMaterial({ color: 0xffd700, emissive: 0xaa8800, emissiveIntensity: 0.6 });
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        frame.position.set(x, y + 1.5, z);
+        frame.rotation.y = 0;
+        this.scene.add(frame);
         
-        // Goal flag
-        const flagGeo = new THREE.BoxGeometry(1.5, 1, 0.1);
-        const flagMat = new THREE.MeshLambertMaterial({ color: 0xffd700 });
-        const flag = new THREE.Mesh(flagGeo, flagMat);
-        flag.position.set(x + 0.75, y + 3, z);
-        this.scene.add(flag);
+        // Glowing inner portal
+        const portalGeo = new THREE.CircleGeometry(1.3, 16);
+        const portalMat = new THREE.MeshBasicMaterial({ 
+            color: 0x4ecdc4, 
+            transparent: true, 
+            opacity: 0.6,
+            side: THREE.DoubleSide
+        });
+        const portal = new THREE.Mesh(portalGeo, portalMat);
+        portal.position.set(x, y + 1.5, z);
+        this.scene.add(portal);
         
-        this.endPoint = { x, y: y + 1, z };
+        // Base platform for the goal
+        this.createPlatform(x, y - 0.25, z, 4, 0.5, 4, 0x5a7d5a);
         
-        // Add particle system for celebration
-        this.createGoalParticles(x, y + 4, z);
+        this.endPoint = { x, y: y + 0.5, z };
+        
+        // Portal particles
+        this.createGoalParticles(x, y + 1.5, z);
     }
     
     createGoalParticles(x, y, z) {
@@ -238,24 +494,28 @@ export class Level {
         this.decorations.push({ type: 'particles', mesh: particles });
     }
     
-    addForestDecorations(minX, maxX) {
-        // Ground grass
-        for (let x = minX; x < maxX; x += 1) {
-            for (let z = -5; z <= 5; z += 1) {
-                if (Math.random() > 0.7) {
-                    const grass = this.createGrass(x, -0.4, z + (Math.random() - 0.5) * 3);
-                    this.decorations.push({ type: 'grass', mesh: grass });
-                }
-            }
+    addBaseDecorations(baseSize, levelNum) {
+        const halfSize = baseSize / 2;
+        
+        // Scatter grass/flowers on the base
+        for (let i = 0; i < 40; i++) {
+            const x = (Math.random() - 0.5) * baseSize * 0.6;
+            const z = (Math.random() - 0.5) * baseSize * 0.6;
+            this.createGrass(x, this.baseY + 0.5, z);
         }
         
-        // Trees
-        const treeCount = Math.floor((maxX - minX) / 5);
-        for (let i = 0; i < treeCount; i++) {
-            const tx = minX + i * 5 + Math.random() * 3;
-            const tz = Math.random() > 0.5 ? 5 + Math.random() * 5 : -5 - Math.random() * 5;
-            this.createTree(tx, -1, tz);
+        // Trees around the edges
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const radius = halfSize * 0.7 + Math.random() * halfSize * 0.2;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            this.createTree(x, this.baseY + 0.5, z);
         }
+    }
+    
+    addForestDecorations(minX, maxX) {
+        // Kept for compatibility but unused in new design
     }
     
     createGrass(x, y, z) {
@@ -288,13 +548,11 @@ export class Level {
     }
     
     addCollectibles(levelLength) {
-        // Additional coins scattered around - only on right side (positive x)
-        for (let i = 0; i < 20; i++) {
-            // Spawn coins only to the right of start position (x >= 2 to clear start platform)
-            const x = 2 + Math.random() * (levelLength - 2);
-            const z = (Math.random() - 0.5) * 4;
-            const y = 1 + Math.random() * 3;
-
+        // Additional coins scattered around the base and on platforms
+        for (let i = 0; i < 15; i++) {
+            const x = (Math.random() - 0.5) * 20;
+            const z = (Math.random() - 0.5) * 20;
+            const y = this.baseY + 2 + Math.random() * 2;
             this.createCollectible(x, y, z);
         }
     }
@@ -421,163 +679,7 @@ export class Level {
             this.world.removeBody(body);
         });
     }
-
-    generateLevel4(length) {
-        // Cave theme
-        this.currentTheme = 'cave';
-        for (let x = 4; x < length; x += 3) {
-            const height = Math.random() * 1.5;
-            const z = (Math.random() - 0.5) * 1.5;
-            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x4a4a5a);
-            
-            // Stalactites
-            if (Math.random() > 0.7) {
-                this.createDecoration(x, height + 5, z, 'stalactite');
-            }
-            
-            // Bats
-            if (x > 15 && Math.random() > 0.7) {
-                this.createEnemy(x, height + 2, z, 'bat');
-            }
-            
-            if (Math.random() > 0.6) {
-                this.createCollectible(x, height + 2, z);
-            }
-        }
-    }
-
-    generateLevel5(length) {
-        // Mountain theme
-        this.currentTheme = 'mountain';
-        let y = 0;
-        for (let x = 4; x < length; x += 4) {
-            y += Math.random() * 2;
-            const z = (Math.random() - 0.5) * 3;
-            this.createPlatform(x, y, z, 3, 0.5, 2.5, 0x8a8a7a);
-            
-            // Eagles
-            if (x > 15 && Math.random() > 0.8) {
-                this.createEnemy(x, y + 5, z, 'eagle');
-            }
-            
-            this.createCollectible(x, y + 3, z);
-        }
-    }
-
-    generateLevel6(length) {
-        // Snow theme
-        this.currentTheme = 'snow';
-        this.isSlippery = true;
-        for (let x = 4; x < length; x += 5) {
-            const height = Math.sin(x * 0.3) * 1.5;
-            const z = Math.sin(x * 0.5) * 2;
-            this.createPlatform(x, height, z, 3, 0.5, 3, 0xeefefe);
-            
-            if (Math.random() > 0.6) {
-                this.createCollectible(x, height + 2.5, z);
-            }
-        }
-    }
-
-    generateLevel7(length) {
-        // Ruins theme
-        this.currentTheme = 'ruins';
-        for (let x = 4; x < length; x += 4) {
-            const height = Math.random() > 0.5 ? 0 : 2;
-            const z = (Math.random() - 0.5) * 2;
-            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x9a8a6a);
-            
-            if (Math.random() > 0.5) {
-                this.createCollectible(x, height + 3, z);
-            }
-        }
-    }
-
-    generateLevel8(length) {
-        // Sky theme
-        this.currentTheme = 'sky';
-        for (let x = 5; x < length; x += 6) {
-            const height = 3 + Math.random() * 4;
-            const z = (Math.random() - 0.5) * 4;
-            this.createPlatform(x, height, z, 3, 1, 3, 0x7addaa);
-            this.createCollectible(x, height + 3, z);
-        }
-    }
-
-    generateLevel9(length) {
-        // Lava theme
-        this.currentTheme = 'lava';
-        for (let x = 4; x < length; x += 4) {
-            const height = Math.random() * 3;
-            const z = (Math.random() - 0.5) * 2;
-            this.createPlatform(x, height, z, 2.5, 0.5, 2, 0x4a3a3a);
-            
-            if (Math.random() > 0.7) {
-                this.createHazard(x, height + 1, z);
-            }
-            
-            this.createCollectible(x, height + 3, z);
-        }
-    }
-
-    generateLevel10(length) {
-        // Underwater theme
-        this.currentTheme = 'underwater';
-        this.isUnderwater = true;
-        for (let x = 4; x < length; x += 4) {
-            const height = Math.sin(x * 0.4) * 2;
-            const z = (Math.random() - 0.5) * 3;
-            this.createPlatform(x, height, z, 3, 0.5, 2.5, 0x5a7a9a);
-            
-            // Fish enemies
-            if (x > 10 && Math.random() > 0.6) {
-                this.createEnemy(x, height + 2, z, 'fish');
-            }
-            
-            this.createCollectible(x, height + 2.5, z);
-        }
-    }
-
-    generateLevel11(length) {
-        // Volcano theme
-        this.currentTheme = 'volcano';
-        for (let x = 4; x < length; x += 3) {
-            const height = Math.random() * 2;
-            const z = (Math.random() - 0.5) * 2;
-            this.createPlatform(x, height, z, 2, 0.5, 2, 0x5a4a4a);
-            this.createCollectible(x, height + 3, z);
-        }
-    }
-
-    generateLevel12(length) {
-        // Castle theme with foxes
-        this.currentTheme = 'castle';
-        for (let x = 5; x < length; x += 5) {
-            const height = Math.random() > 0.5 ? 0 : 1.5;
-            const z = (Math.random() - 0.5) * 2;
-            this.createPlatform(x, height, z, 3, 0.5, 2.5, 0x7a7a8a);
-            
-            // Fox guards
-            if (x > 10 && Math.random() > 0.75) {
-                this.createEnemy(x, height + 1, z, 'fox');
-            }
-            
-            this.createCollectible(x, height + 2.5, z);
-        }
-    }
-
-    generateLevel13(length) {
-        // Space theme
-        this.currentTheme = 'space';
-        this.isLowGravity = true;
-        for (let x = 5; x < length; x += 6) {
-            const height = 2 + Math.random() * 3;
-            const z = (Math.random() - 0.5) * 4;
-            this.createPlatform(x, height, z, 2.5, 0.5, 2.5, 0x3a3a5a);
-            this.createCollectible(x, height + 3.5, z);
-        }
-    }
-
+    
     // Helper methods for level generation
     createEnemy(x, y, z, type) {
         const enemy = new Enemy(type, x, y, z, this.scene, this.world);
@@ -593,14 +695,7 @@ export class Level {
         return powerup;
     }
     
-    createCollectible(x, y, z) {
-        const collectible = new Collectible(x, y, z, this.scene);
-        this.collectibles.push(collectible);
-        return collectible;
-    }
-    
     createDecoration(x, y, z, type) {
-        // Basic decoration shapes
         let mesh;
         if (type === 'tree') {
             mesh = this.createTree(x, y, z);
