@@ -146,13 +146,15 @@ export class InputHandler {
         // Transform to world space using camera yaw
         // Camera position: (player - dist*sinYaw, y, player - dist*cosYaw)
         // Camera looks TOWARD player, so camera forward = (sinYaw, 0, cosYaw)
+        // Three.js screen-right = cross(worldUp, -forward) normalized in XZ
+        //   = (-forwardZ, 0, forwardX) = (-cosYaw, 0, sinYaw)
         const cos = Math.cos(this.cameraYaw);
         const sin = Math.sin(this.cameraYaw);
         
-        // Forward = (sin(yaw), 0, cos(yaw))
-        // Right   = (cos(yaw), 0, -sin(yaw))
-        const worldX = forward * sin + right * cos;
-        const worldZ = forward * cos - right * sin;
+        // Forward = (sinYaw, 0, cosYaw) — toward where camera looks
+        // Screen Right = (-cosYaw, 0, sinYaw) — right on the rendered view
+        const worldX = forward * sin + right * (-cos);
+        const worldZ = forward * cos + right * sin;
         
         return { x: worldX, z: worldZ };
     }
