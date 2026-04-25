@@ -75,6 +75,23 @@
             transform: scale(1.05);
         }
 
+        #version-tag {
+            position: absolute;
+            bottom: 12px;
+            right: 16px;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.35);
+            z-index: 11;
+            font-family: monospace;
+            pointer-events: none;
+        }
+
+        #hud-version {
+            font-size: 0.75rem;
+            color: rgba(78,205,196,0.5);
+            margin-left: 8px;
+        }
+
         #hud {
             position: absolute;
             top: 20px;
@@ -192,6 +209,8 @@
             </div>
         </div>
 
+        <div id="version-tag">v—</div>
+
         <div id="hud" class="hidden">
             <div class="hud-item">
                 <span class="hud-label">Lives:</span>
@@ -208,6 +227,7 @@
             <div class="hud-item">
                 <span class="hud-label">Time:</span>
                 <span id="time-display">00:00</span>
+                <span id="hud-version">v—</span>
             </div>
         </div>
 

@@ -8,6 +8,7 @@ import * as THREE from '../vendor/three.module.js';
 import * as CANNON from '../vendor/cannon-es.js';
 import { Player } from './player.js';
 import { InputHandler } from './input.js';
+import { VERSION } from './version.js';
 import { Level } from './level.js';
 import { Enemy } from './enemy.js';
 import { PowerUp, ActivePowerUp } from './powerup.js';
@@ -135,6 +136,13 @@ export class Game {
             }
         };
         window.addEventListener('keydown', checkStartKey);
+        
+        // Populate version display
+        const versionStr = `v${VERSION}`;
+        const versionTag = document.getElementById('version-tag');
+        if (versionTag) versionTag.textContent = versionStr;
+        const hudVersion = document.getElementById('hud-version');
+        if (hudVersion) hudVersion.textContent = versionStr;
     }
     
     startGame() {
