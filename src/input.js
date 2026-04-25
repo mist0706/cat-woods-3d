@@ -144,17 +144,15 @@ export class InputHandler {
         }
         
         // Transform to world space using camera yaw
-        // The yaw convention is negated (mouse right decreases yaw),
-        // so we use -yaw to get the actual camera look direction.
-        const actualYaw = -this.cameraYaw;
-        const cos = Math.cos(actualYaw);
-        const sin = Math.sin(actualYaw);
+        // Camera position: (player - dist*sinYaw, y, player - dist*cosYaw)
+        // Camera looks TOWARD player, so camera forward = (sinYaw, 0, cosYaw)
+        const cos = Math.cos(this.cameraYaw);
+        const sin = Math.sin(this.cameraYaw);
         
-        // Forward direction (where camera looks) in world space
-        // Camera forward = (sin(yaw), 0, cos(yaw))
-        // Right direction = (cos(yaw), 0, -sin(yaw))
-        const worldX = right * cos + forward * sin;
-        const worldZ = right * (-sin) + forward * cos;
+        // Forward = (sin(yaw), 0, cos(yaw))
+        // Right   = (cos(yaw), 0, -sin(yaw))
+        const worldX = forward * sin + right * cos;
+        const worldZ = forward * cos - right * sin;
         
         return { x: worldX, z: worldZ };
     }
